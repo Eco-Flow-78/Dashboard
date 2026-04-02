@@ -3,176 +3,140 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>EcoFlow SCADA | Advanced P&ID</title>
+    <title>EcoFlow HMI | Industrial Light Theme</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        .industrial-bg { background-color: #0b1121; }
-        .neon-blue { text-shadow: 0 0 5px #3b82f6, 0 0 10px #3b82f6; }
-        .neon-green { text-shadow: 0 0 5px #22c55e, 0 0 10px #22c55e; }
+        /* Traditional HMI Light Theme */
+        body { background-color: #e5e7eb; color: #1f2937; } /* Slate 200 background */
         
-        /* Pipe Styles */
-        .pipe { stroke-width: 8; stroke-linecap: round; transition: stroke 1s ease-in-out; }
-        .pipe-empty { stroke: #374151; } /* Dark Gray */
-        .pipe-filled { stroke: #3b82f6; filter: drop-shadow(0 0 4px #3b82f6); } /* Glowing Blue */
+        .scada-panel { 
+            background-color: #ffffff; 
+            border: 2px solid #9ca3af; 
+            border-top: 2px solid #ffffff;
+            border-left: 2px solid #ffffff;
+            border-bottom: 2px solid #6b7280;
+            border-right: 2px solid #6b7280;
+            box-shadow: 4px 4px 10px rgba(0,0,0,0.1); 
+        }
+
+        /* 3D Pipe Styles */
+        .pipe { stroke-width: 10; stroke-linecap: round; transition: stroke 0.5s ease; filter: drop-shadow(2px 2px 2px rgba(0,0,0,0.2)); }
+        .pipe-empty { stroke: #d1d5db; } /* Light Gray */
+        .pipe-filled { stroke: #3b82f6; } /* Industrial Water Blue */
         
         /* Tank Water Animation */
         @keyframes wave { 0% { d: path("M0,20 Q25,10 50,20 T100,20 L100,100 L0,100 Z"); } 50% { d: path("M0,20 Q25,30 50,20 T100,20 L100,100 L0,100 Z"); } 100% { d: path("M0,20 Q25,10 50,20 T100,20 L100,100 L0,100 Z"); } }
-        .water-wave { animation: wave 3s infinite ease-in-out; fill: #3b82f6; opacity: 0.8; }
+        .water-wave { animation: wave 3s infinite ease-in-out; fill: #60a5fa; opacity: 0.9; }
         
         /* Pump Impeller Spin */
         .spin-fast { animation: spin 0.2s linear infinite; transform-origin: center; }
         @keyframes spin { 100% { transform: rotate(360deg); } }
 
-        /* Panel Separation */
-        .scada-panel { background-color: #111827; border: 2px solid #374151; border-radius: 8px; padding: 1rem; box-shadow: inset 0 0 20px rgba(0,0,0,0.5); }
-        .panel-header { border-bottom: 1px solid #374151; padding-bottom: 0.5rem; margin-bottom: 1rem; font-weight: bold; letter-spacing: 0.05em; }
+        /* Interactive Elements */
+        .hover-target { cursor: crosshair; transition: filter 0.2s; }
+        .hover-target:hover { filter: drop-shadow(0 0 8px rgba(59, 130, 246, 0.6)); }
+
+        /* Floating Tooltip */
+        #scada-tooltip {
+            position: absolute;
+            background-color: #f8fafc;
+            border: 2px solid #334155;
+            padding: 12px;
+            border-radius: 4px;
+            box-shadow: 5px 5px 15px rgba(0,0,0,0.3);
+            pointer-events: none; /* Prevents tooltip from blocking hover */
+            z-index: 50;
+            font-family: monospace;
+            min-width: 200px;
+        }
     </style>
 </head>
-<body class="industrial-bg text-gray-200 min-h-screen p-6 font-mono select-none">
+<body class="min-h-screen p-6 font-sans select-none">
 
-    <header class="flex justify-between items-end border-b-2 border-blue-900 pb-4 mb-6">
+    <div id="scada-tooltip" class="hidden">
+        <div id="tt-header" class="font-bold border-b border-gray-400 pb-1 mb-2 text-sm bg-gray-200 px-2 uppercase">DEVICE</div>
+        <div id="tt-body" class="text-xs space-y-1">--</div>
+    </div>
+
+    <header class="flex justify-between items-end border-b-4 border-gray-400 pb-4 mb-6">
         <div>
-            <h1 class="text-4xl font-black text-blue-500 tracking-widest">ECOFLOW-IoT SCADA</h1>
-            <p class="text-sm text-gray-400 uppercase tracking-widest mt-1">Distributed Process Control Array</p>
+            <h1 class="text-4xl font-black text-slate-800 tracking-tight">PROCESS OVERVIEW</h1>
+            <p class="text-sm text-slate-600 uppercase tracking-widest font-bold mt-1">Area 1: Flow Control & Telemetry</p>
         </div>
-        <div id="sys-status" class="px-6 py-2 bg-red-900/50 text-red-400 border-2 border-red-700 rounded font-bold tracking-widest shadow-[0_0_15px_rgba(239,68,68,0.3)]">
-            SYSTEM OFFLINE
+        <div id="sys-status" class="px-6 py-2 bg-gray-300 text-gray-500 border-2 border-gray-400 font-bold tracking-widest shadow-inner">
+            SYSTEM CONNECTING...
         </div>
     </header>
 
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <div class="scada-panel p-2 relative h-[600px] w-full flex justify-center items-center bg-[url('https://www.transparenttextures.com/patterns/grid-me.png')]">
         
-        <div class="scada-panel lg:col-span-2 relative h-[500px]">
-            <h2 class="panel-header text-blue-400">SECTION 1: PHYSICAL PROCESS VISUALIZATION</h2>
-            
-            <svg class="w-full h-[400px]" viewBox="0 0 1000 400" preserveAspectRatio="xMidYMid meet">
-                <path id="pipe-p1" class="pipe pipe-empty" d="M 170,180 L 250,180 L 250,220" fill="none" />
-                <path id="pipe-p2" class="pipe pipe-empty" d="M 170,280 L 250,280 L 250,260" fill="none" />
-                <path id="pipe-main" class="pipe pipe-empty" d="M 270,240 L 400,240" fill="none" />
-                <path id="pipe-split" class="pipe pipe-empty" d="M 450,240 L 520,240" fill="none" />
-                <path id="pipe-em" class="pipe pipe-empty" d="M 520,240 L 650,240" fill="none" />
-                <path id="pipe-return-1" class="pipe pipe-empty" d="M 520,240 L 520,80 L 100,80 L 100,100" fill="none" />
-                <path id="pipe-return-2" class="pipe pipe-empty" d="M 850,240 L 900,240 L 900,50 L 120,50 L 120,100" fill="none" />
+        <div class="absolute top-4 left-4 bg-white border border-gray-300 p-2 shadow-sm text-xs font-mono text-gray-500">
+            INSTRUCTION: Hover cursor over physical components to view live telemetry.
+        </div>
 
-                <rect x="50" y="100" width="100" height="250" fill="#1f2937" stroke="#4b5563" stroke-width="4" rx="8" />
+        <svg class="w-full max-w-5xl h-[500px]" viewBox="0 0 1000 400" preserveAspectRatio="xMidYMid meet">
+            <path id="pipe-p1" class="pipe pipe-empty" d="M 170,180 L 250,180 L 250,220" fill="none" />
+            <path id="pipe-p2" class="pipe pipe-empty" d="M 170,280 L 250,280 L 250,260" fill="none" />
+            <path id="pipe-main" class="pipe pipe-empty" d="M 270,240 L 400,240" fill="none" />
+            <path id="pipe-split" class="pipe pipe-empty" d="M 450,240 L 520,240" fill="none" />
+            <path id="pipe-em" class="pipe pipe-empty" d="M 520,240 L 650,240" fill="none" />
+            <path id="pipe-return-1" class="pipe pipe-empty" d="M 520,240 L 520,80 L 100,80 L 100,100" fill="none" />
+            <path id="pipe-return-2" class="pipe pipe-empty" d="M 850,240 L 900,240 L 900,50 L 120,50 L 120,100" fill="none" />
+
+            <g class="hover-target" onmousemove="showTooltip(event, 'tank')" onmouseleave="hideTooltip()">
+                <rect x="50" y="100" width="100" height="250" fill="#f8fafc" stroke="#475569" stroke-width="4" rx="2" />
                 <svg x="50" y="200" width="100" height="150" viewBox="0 0 100 100" preserveAspectRatio="none">
                     <path class="water-wave" />
                 </svg>
-                <text x="100" y="130" fill="#9ca3af" font-size="14" font-weight="bold" text-anchor="middle">RESERVOIR</text>
+                <text x="100" y="130" fill="#334155" font-size="14" font-weight="bold" font-family="sans-serif" text-anchor="middle">RESERVOIR</text>
+            </g>
 
-                <circle cx="150" cy="180" r="25" fill="#374151" stroke="#9ca3af" stroke-width="3" />
-                <path id="impeller-1" d="M 150,165 L 150,195 M 135,180 L 165,180" stroke="#f3f4f6" stroke-width="4" transform-origin="150px 180px" />
-                <text x="150" y="225" fill="#fff" font-size="12" text-anchor="middle" id="p1-lbl">P1 OFF</text>
+            <g class="hover-target" onmousemove="showTooltip(event, 'pump1')" onmouseleave="hideTooltip()">
+                <circle cx="150" cy="180" r="28" fill="#e2e8f0" stroke="#475569" stroke-width="4" />
+                <path id="impeller-1" d="M 150,165 L 150,195 M 135,180 L 165,180" stroke="#64748b" stroke-width="6" transform-origin="150px 180px" />
+                <rect x="130" y="215" width="40" height="20" fill="#475569" rx="2"/>
+                <text x="150" y="228" fill="#fff" font-size="10" font-weight="bold" text-anchor="middle" id="p1-lbl">P1 OFF</text>
+            </g>
 
-                <circle cx="150" cy="280" r="25" fill="#374151" stroke="#9ca3af" stroke-width="3" />
-                <path id="impeller-2" d="M 150,265 L 150,295 M 135,280 L 165,280" stroke="#f3f4f6" stroke-width="4" transform-origin="150px 280px" />
-                <text x="150" y="325" fill="#fff" font-size="12" text-anchor="middle" id="p2-lbl">P2 OFF</text>
+            <g class="hover-target" onmousemove="showTooltip(event, 'pump2')" onmouseleave="hideTooltip()">
+                <circle cx="150" cy="280" r="28" fill="#e2e8f0" stroke="#475569" stroke-width="4" />
+                <path id="impeller-2" d="M 150,265 L 150,295 M 135,280 L 165,280" stroke="#64748b" stroke-width="6" transform-origin="150px 280px" />
+                <rect x="130" y="315" width="40" height="20" fill="#475569" rx="2"/>
+                <text x="150" y="328" fill="#fff" font-size="10" font-weight="bold" text-anchor="middle" id="p2-lbl">P2 OFF</text>
+            </g>
 
-                <circle cx="250" cy="240" r="20" fill="#4b5563" stroke="#d1d5db" stroke-width="2" />
+            <circle cx="250" cy="240" r="22" fill="#cbd5e1" stroke="#475569" stroke-width="4" />
 
-                <polygon points="400,220 450,260 450,220 400,260" fill="#ef4444" id="valve-icon" stroke="#fff" stroke-width="2" />
-                <circle cx="425" cy="240" r="8" fill="#111827" stroke="#fff" />
-                <text x="425" y="285" fill="#fff" font-size="12" font-weight="bold" text-anchor="middle" id="valve-lbl">V1: CLOSED 0%</text>
+            <g class="hover-target" onmousemove="showTooltip(event, 'valve')" onmouseleave="hideTooltip()">
+                <polygon points="400,210 450,270 450,210 400,270" fill="#ef4444" id="valve-icon" stroke="#1e293b" stroke-width="3" stroke-linejoin="round" />
+                <circle cx="425" cy="240" r="10" fill="#f8fafc" stroke="#1e293b" stroke-width="3" />
+                <rect x="385" y="280" width="80" height="20" fill="#475569" rx="2"/>
+                <text x="425" y="293" fill="#fff" font-size="10" font-weight="bold" text-anchor="middle" id="valve-lbl">V1: CLOSED 0%</text>
+            </g>
 
-                <rect x="650" y="210" width="200" height="60" fill="#1e3a8a" stroke="#60a5fa" stroke-width="3" rx="4" />
-                <rect x="710" y="190" width="80" height="20" fill="#991b1b" stroke="#fca5a5" />
-                <rect x="710" y="270" width="80" height="20" fill="#991b1b" stroke="#fca5a5" />
-                <circle cx="750" cy="225" r="5" fill="#fbbf24" />
-                <circle cx="750" cy="255" r="5" fill="#fbbf24" />
-                <text x="750" y="200" fill="#60a5fa" font-size="12" font-weight="bold" text-anchor="middle">FARADAY SENSOR TUBE</text>
-            </svg>
-        </div>
-
-        <div class="flex flex-col gap-6">
-            
-            <div class="scada-panel">
-                <h2 class="panel-header text-purple-400">SECTION 2: VALVE PID CONTROLLER</h2>
-                <div class="grid grid-cols-3 gap-3 text-center mb-4">
-                    <div class="bg-gray-900 p-3 rounded border border-gray-700">
-                        <div class="text-[10px] text-gray-500 uppercase tracking-widest">P-Gain</div>
-                        <div class="text-xl text-purple-400 font-bold mt-1" id="pid-p">0.00</div>
-                    </div>
-                    <div class="bg-gray-900 p-3 rounded border border-gray-700">
-                        <div class="text-[10px] text-gray-500 uppercase tracking-widest">I-Gain</div>
-                        <div class="text-xl text-purple-400 font-bold mt-1" id="pid-i">0.00</div>
-                    </div>
-                    <div class="bg-gray-900 p-3 rounded border border-gray-700">
-                        <div class="text-[10px] text-gray-500 uppercase tracking-widest">D-Gain</div>
-                        <div class="text-xl text-purple-400 font-bold mt-1" id="pid-d">0.00</div>
-                    </div>
-                </div>
-                <div class="flex justify-between items-center bg-gray-900 p-3 rounded border border-gray-700">
-                    <span class="text-sm text-gray-400">Setpoint (Target Flow):</span>
-                    <span class="text-lg text-white font-bold" id="pid-sp">0.0 LPM</span>
-                </div>
-            </div>
-
-            <div class="scada-panel flex-grow">
-                <h2 class="panel-header text-yellow-400">SECTION 3: EM SENSOR TELEMETRY</h2>
-                <ul class="space-y-4 text-sm mt-4">
-                    <li class="flex justify-between items-center bg-gray-800/50 p-2 rounded"><span class="text-gray-400">Magnetic Field (B):</span> <span class="text-yellow-400 font-bold text-lg" id="em-bfield">0.000 T</span></li>
-                    <li class="flex justify-between items-center bg-gray-800/50 p-2 rounded"><span class="text-gray-400">Excitation Current:</span> <span class="text-yellow-400 font-bold text-lg" id="em-curr">0.00 A</span></li>
-                    <li class="flex justify-between items-center bg-gray-800/50 p-2 rounded border-l-4 border-blue-500"><span class="text-gray-400">Induced EMF:</span> <span class="text-blue-400 font-bold text-lg" id="em-emf">0.0 mV</span></li>
-                    <li class="flex justify-between items-center bg-gray-800/50 p-2 rounded border-l-4 border-green-500"><span class="text-gray-400">Inst. Flow Rate:</span> <span class="text-green-400 font-bold text-lg" id="em-lpm">0.00 LPM</span></li>
-                    <li class="flex justify-between items-center bg-gray-800/50 p-2 rounded"><span class="text-gray-400">Total Volume Flow:</span> <span class="text-white font-bold text-lg" id="em-total">0.0 L</span></li>
-                    <li class="flex justify-between items-center mt-4 pt-4 border-t border-gray-700">
-                        <span class="text-gray-500 text-xs uppercase tracking-widest">Electrode Status</span> 
-                        <span class="px-3 py-1 bg-gray-800 text-gray-400 rounded text-xs border border-gray-600 font-bold" id="em-health">CHECKING</span>
-                    </li>
-                </ul>
-            </div>
-        </div>
-    </div>
-
-    <div class="scada-panel mt-6">
-        <h2 class="panel-header text-green-400">SECTION 4: HARDWARE SIGNAL CONDITIONING CHAIN</h2>
-        
-        <div class="flex flex-col md:flex-row items-center justify-between gap-4 py-2">
-            
-            <div class="bg-gray-900 border-2 border-gray-700 p-4 rounded w-full text-center shadow-inner relative">
-                <div class="absolute -top-3 left-1/2 transform -translate-x-1/2 bg-gray-800 px-2 text-[10px] text-gray-400 uppercase tracking-widest border border-gray-700 rounded-full">1. Electrodes</div>
-                <div class="text-2xl font-black text-gray-200 mt-2" id="sig-raw">0.0 <span class="text-sm font-normal text-gray-500">mV</span></div>
-            </div>
-
-            <div class="text-gray-600 hidden md:block text-2xl">➔</div>
-
-            <div class="bg-blue-900/20 border-2 border-blue-800 p-4 rounded w-full text-center relative overflow-hidden">
-                <div class="absolute -top-3 left-1/2 transform -translate-x-1/2 bg-blue-900 px-2 text-[10px] text-blue-300 uppercase tracking-widest border border-blue-700 rounded-full">2. AD620 In-Amp</div>
-                <div class="absolute top-0 left-0 w-full h-1 bg-blue-500"></div>
-                <div class="text-2xl font-black text-blue-400 mt-2 neon-blue" id="sig-amp">0.00 <span class="text-sm font-normal text-blue-600">V</span></div>
-                <div class="text-[10px] text-blue-400 mt-2 tracking-widest" id="sig-gain">GAIN: x0</div>
-            </div>
-
-            <div class="text-gray-600 hidden md:block text-2xl">➔</div>
-
-            <div class="bg-gray-900 border-2 border-gray-700 p-4 rounded w-full text-center shadow-inner relative">
-                <div class="absolute -top-3 left-1/2 transform -translate-x-1/2 bg-gray-800 px-2 text-[10px] text-gray-400 uppercase tracking-widest border border-gray-700 rounded-full">3. RC Filter</div>
-                <div class="text-2xl font-black text-gray-200 mt-2" id="sig-filt">0.00 <span class="text-sm font-normal text-gray-500">V</span></div>
-            </div>
-
-            <div class="text-gray-600 hidden md:block text-2xl">➔</div>
-
-            <div class="bg-gray-900 border-2 border-gray-700 p-4 rounded w-full text-center shadow-inner relative">
-                <div class="absolute -top-3 left-1/2 transform -translate-x-1/2 bg-gray-800 px-2 text-[10px] text-gray-400 uppercase tracking-widest border border-gray-700 rounded-full">4. ADS1115</div>
-                <div class="text-2xl font-black text-gray-200 mt-2" id="sig-adc">0</div>
-                <div class="text-[10px] text-gray-500 mt-2 tracking-widest">16-BIT DIGITIZED</div>
-            </div>
-
-            <div class="text-gray-600 hidden md:block text-2xl">➔</div>
-
-            <div class="bg-green-900/20 border-2 border-green-800 p-4 rounded w-full text-center relative overflow-hidden">
-                <div class="absolute -top-3 left-1/2 transform -translate-x-1/2 bg-green-900 px-2 text-[10px] text-green-300 uppercase tracking-widest border border-green-700 rounded-full">5. ESP32 Edge</div>
-                <div class="absolute top-0 left-0 w-full h-1 bg-green-500"></div>
-                <div class="text-lg font-black text-green-400 mt-2 neon-green py-1 border border-green-500/30 rounded bg-green-900/30">JSON READY</div>
-            </div>
-
-        </div>
+            <g class="hover-target" onmousemove="showTooltip(event, 'sensor')" onmouseleave="hideTooltip()">
+                <rect x="630" y="200" width="20" height="80" fill="#94a3b8" stroke="#334155" stroke-width="3" rx="2"/>
+                <rect x="850" y="200" width="20" height="80" fill="#94a3b8" stroke="#334155" stroke-width="3" rx="2"/>
+                
+                <rect x="650" y="210" width="200" height="60" fill="#f1f5f9" stroke="#334155" stroke-width="4" />
+                
+                <rect x="710" y="185" width="80" height="25" fill="#ef4444" stroke="#7f1d1d" stroke-width="2" rx="2"/>
+                <rect x="710" y="270" width="80" height="25" fill="#ef4444" stroke="#7f1d1d" stroke-width="2" rx="2"/>
+                
+                <circle cx="750" cy="225" r="6" fill="#fbbf24" stroke="#000" stroke-width="1"/>
+                <circle cx="750" cy="255" r="6" fill="#fbbf24" stroke="#000" stroke-width="1"/>
+                
+                <rect x="685" y="310" width="130" height="20" fill="#475569" rx="2"/>
+                <text x="750" y="323" fill="#fff" font-size="10" font-weight="bold" text-anchor="middle">FARADAY CHAMBER</text>
+            </g>
+        </svg>
     </div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-app.js";
         import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-database.js";
 
+        // Firebase Config
         const firebaseConfig = {
             apiKey: "AIzaSyA9TrLnpHEsRijt8hbljFrJA0AU2c-Jk5g",
             authDomain: "majortrial-1.firebaseapp.com",
@@ -186,26 +150,34 @@
         const app = initializeApp(firebaseConfig);
         const db = getDatabase(app);
 
+        // GLOBAL MEMORY (Stores live data so tooltips can read it instantly)
+        window.systemData = {
+            pumps: { p1_on: false, p2_on: false },
+            valve: { state_on: false, open_pct: 0, p: 0, i: 0, d: 0, sp: 0 },
+            em: { b_field: 0, current: 0, emf_raw: 0, lpm: 0, total_vol: 0, health: "UNKNOWN" }
+        };
+
         // System Connection Status
         onValue(ref(db, '.info/connected'), (snap) => {
             const statusBox = document.getElementById('sys-status');
             if (snap.val() === true) {
                 statusBox.innerText = "SYSTEM ONLINE";
-                statusBox.className = "px-6 py-2 bg-green-900/50 text-green-400 border-2 border-green-500 rounded font-bold tracking-widest shadow-[0_0_15px_rgba(34,197,94,0.3)]";
+                statusBox.className = "px-6 py-2 bg-green-100 text-green-800 border-2 border-green-500 font-bold tracking-widest shadow-sm";
             } else {
                 statusBox.innerText = "SYSTEM OFFLINE";
-                statusBox.className = "px-6 py-2 bg-red-900/50 text-red-400 border-2 border-red-700 rounded font-bold tracking-widest shadow-[0_0_15px_rgba(239,68,68,0.3)]";
+                statusBox.className = "px-6 py-2 bg-red-100 text-red-800 border-2 border-red-500 font-bold tracking-widest shadow-sm";
             }
         });
 
         // 1. Listen to Pumps
         onValue(ref(db, 'telemetry/pumps'), (snap) => {
-            const data = snap.val() || { p1_on: false, p2_on: false };
+            if(snap.val()) window.systemData.pumps = snap.val();
+            const data = window.systemData.pumps;
             
             if (data.p1_on) {
                 document.getElementById('impeller-1').classList.add('spin-fast');
-                document.getElementById('p1-lbl').innerText = "P1 ON";
-                document.getElementById('p1-lbl').setAttribute('fill', '#22c55e');
+                document.getElementById('p1-lbl').innerText = "P1 RUNNING";
+                document.getElementById('p1-lbl').setAttribute('fill', '#4ade80');
                 document.getElementById('pipe-p1').classList.replace('pipe-empty', 'pipe-filled');
             } else {
                 document.getElementById('impeller-1').classList.remove('spin-fast');
@@ -216,8 +188,8 @@
 
             if (data.p2_on) {
                 document.getElementById('impeller-2').classList.add('spin-fast');
-                document.getElementById('p2-lbl').innerText = "P2 ON";
-                document.getElementById('p2-lbl').setAttribute('fill', '#22c55e');
+                document.getElementById('p2-lbl').innerText = "P2 RUNNING";
+                document.getElementById('p2-lbl').setAttribute('fill', '#4ade80');
                 document.getElementById('pipe-p2').classList.replace('pipe-empty', 'pipe-filled');
             } else {
                 document.getElementById('impeller-2').classList.remove('spin-fast');
@@ -226,30 +198,24 @@
                 document.getElementById('pipe-p2').classList.replace('pipe-filled', 'pipe-empty');
             }
 
-            const anyPumpOn = data.p1_on || data.p2_on;
             const mainPipe = document.getElementById('pipe-main');
-            if(anyPumpOn) {
-                mainPipe.classList.replace('pipe-empty', 'pipe-filled');
-            } else {
-                mainPipe.classList.replace('pipe-filled', 'pipe-empty');
-            }
+            if(data.p1_on || data.p2_on) mainPipe.classList.replace('pipe-empty', 'pipe-filled');
+            else mainPipe.classList.replace('pipe-filled', 'pipe-empty');
+            
+            updateActiveTooltip();
         });
 
-        // 2. Listen to Valve & PID
+        // 2. Listen to Valve
         onValue(ref(db, 'telemetry/valve'), (snap) => {
-            const data = snap.val() || { state_on: false, open_pct: 0, p: 0, i: 0, d: 0, sp: 0 };
-            
-            document.getElementById('pid-p').innerText = data.p.toFixed(2);
-            document.getElementById('pid-i').innerText = data.i.toFixed(2);
-            document.getElementById('pid-d').innerText = data.d.toFixed(2);
-            document.getElementById('pid-sp').innerText = data.sp + " LPM";
+            if(snap.val()) window.systemData.valve = snap.val();
+            const data = window.systemData.valve;
             
             const valveLbl = document.getElementById('valve-lbl');
             const valveIcon = document.getElementById('valve-icon');
             
             if(data.state_on) {
-                valveLbl.innerText = `V1: OPEN ${data.open_pct}%`;
-                valveLbl.setAttribute('fill', '#22c55e');
+                valveLbl.innerText = `V1: ${data.open_pct}%`;
+                valveLbl.setAttribute('fill', '#4ade80');
                 valveIcon.setAttribute('fill', '#22c55e'); 
                 
                 document.getElementById('pipe-split').classList.replace('pipe-empty', 'pipe-filled');
@@ -257,7 +223,7 @@
                 document.getElementById('pipe-return-1').classList.replace('pipe-empty', 'pipe-filled');
                 document.getElementById('pipe-return-2').classList.replace('pipe-empty', 'pipe-filled');
             } else {
-                valveLbl.innerText = "V1: CLOSED 0%";
+                valveLbl.innerText = "V1: CLOSED";
                 valveLbl.setAttribute('fill', '#fff');
                 valveIcon.setAttribute('fill', '#ef4444'); 
 
@@ -266,34 +232,87 @@
                 document.getElementById('pipe-return-1').classList.replace('pipe-filled', 'pipe-empty');
                 document.getElementById('pipe-return-2').classList.replace('pipe-filled', 'pipe-empty');
             }
+            updateActiveTooltip();
         });
 
-        // 3. Listen to Electromagnet & Signal Chain
+        // 3. Listen to Electromagnet
         onValue(ref(db, 'telemetry/electromagnet'), (snap) => {
-            const data = snap.val() || { b_field: 0, current: 0, emf_raw: 0, emf_amp: 0, lpm: 0, total_vol: 0, health: "UNKNOWN", adc_val: 0, gain: 1 };
-            
-            document.getElementById('em-bfield').innerText = data.b_field.toFixed(3) + " T";
-            document.getElementById('em-curr').innerText = data.current.toFixed(2) + " A";
-            document.getElementById('em-emf').innerText = data.emf_raw.toFixed(1) + " mV";
-            document.getElementById('em-lpm').innerText = data.lpm.toFixed(2) + " LPM";
-            document.getElementById('em-total').innerText = data.total_vol.toFixed(1) + " L";
-            
-            const healthUI = document.getElementById('em-health');
-            healthUI.innerText = data.health;
-            if(data.health === "GOOD") {
-                healthUI.className = "px-3 py-1 bg-green-900/50 text-green-400 rounded text-xs border border-green-700 font-bold";
-            } else if (data.health === "UNKNOWN") {
-                healthUI.className = "px-3 py-1 bg-gray-800 text-gray-400 rounded text-xs border border-gray-600 font-bold";
-            } else {
-                healthUI.className = "px-3 py-1 bg-red-900/50 text-red-400 rounded text-xs border border-red-700 font-bold";
-            }
-
-            document.getElementById('sig-raw').innerHTML = `${data.emf_raw.toFixed(1)} <span class="text-sm font-normal text-gray-500">mV</span>`;
-            document.getElementById('sig-amp').innerHTML = `${data.emf_amp.toFixed(2)} <span class="text-sm font-normal text-blue-600">V</span>`;
-            document.getElementById('sig-gain').innerText = `GAIN: x${data.gain}`;
-            document.getElementById('sig-filt').innerHTML = `${data.emf_amp.toFixed(2)} <span class="text-sm font-normal text-gray-500">V</span>`;
-            document.getElementById('sig-adc').innerText = data.adc_val;
+            if(snap.val()) window.systemData.em = snap.val();
+            updateActiveTooltip();
         });
+
+        // --- TOOLTIP LOGIC ---
+        let currentHover = null;
+        const tooltip = document.getElementById('scada-tooltip');
+        const ttHeader = document.getElementById('tt-header');
+        const ttBody = document.getElementById('tt-body');
+
+        window.showTooltip = function(e, device) {
+            currentHover = device;
+            tooltip.classList.remove('hidden');
+            
+            // Position near cursor
+            tooltip.style.left = (e.pageX + 15) + 'px';
+            tooltip.style.top = (e.pageY + 15) + 'px';
+            
+            renderTooltipContent();
+        }
+
+        window.hideTooltip = function() {
+            currentHover = null;
+            tooltip.classList.add('hidden');
+        }
+
+        // Re-renders the tooltip if data changes while mouse is hovering
+        function updateActiveTooltip() {
+            if(currentHover) renderTooltipContent();
+        }
+
+        function renderTooltipContent() {
+            const sys = window.systemData;
+            let html = '';
+
+            if(currentHover === 'tank') {
+                ttHeader.innerText = "MAIN RESERVOIR TANK";
+                html = `
+                    <div class="flex justify-between border-b border-gray-300 py-1"><span>Total Loop Volume:</span> <span class="font-bold text-blue-600">${sys.em.total_vol || 0} L</span></div>
+                    <div class="flex justify-between py-1"><span>Status:</span> <span class="font-bold text-green-600">NOMINAL</span></div>
+                `;
+            } 
+            else if(currentHover === 'pump1') {
+                ttHeader.innerText = "CENTRIFUGAL PUMP 1";
+                html = `
+                    <div class="flex justify-between border-b border-gray-300 py-1"><span>Command State:</span> <span class="font-bold ${sys.pumps.p1_on ? 'text-green-600' : 'text-red-600'}">${sys.pumps.p1_on ? 'RUNNING' : 'STOPPED'}</span></div>
+                    <div class="flex justify-between py-1"><span>Power Draw:</span> <span class="font-bold">-- W</span></div>
+                `;
+            }
+            else if(currentHover === 'pump2') {
+                ttHeader.innerText = "CENTRIFUGAL PUMP 2";
+                html = `
+                    <div class="flex justify-between border-b border-gray-300 py-1"><span>Command State:</span> <span class="font-bold ${sys.pumps.p2_on ? 'text-green-600' : 'text-red-600'}">${sys.pumps.p2_on ? 'RUNNING' : 'STOPPED'}</span></div>
+                    <div class="flex justify-between py-1"><span>Power Draw:</span> <span class="font-bold">-- W</span></div>
+                `;
+            }
+            else if(currentHover === 'valve') {
+                ttHeader.innerText = "PID CONTROL VALVE";
+                html = `
+                    <div class="flex justify-between border-b border-gray-300 py-1 text-slate-500 text-[10px]">PID: [ P:${sys.valve.p} | I:${sys.valve.i} | D:${sys.valve.d} ]</div>
+                    <div class="flex justify-between border-b border-gray-300 py-1"><span>Target Setpoint:</span> <span class="font-bold">${sys.valve.sp} LPM</span></div>
+                    <div class="flex justify-between py-1"><span>Valve Aperture:</span> <span class="font-bold text-blue-600">${sys.valve.open_pct}%</span></div>
+                `;
+            }
+            else if(currentHover === 'sensor') {
+                ttHeader.innerText = "FARADAY CHAMBER";
+                html = `
+                    <div class="flex justify-between border-b border-gray-300 py-1"><span>Excitation Current:</span> <span class="font-bold">${sys.em.current || 0} A</span></div>
+                    <div class="flex justify-between border-b border-gray-300 py-1"><span>Magnetic Field:</span> <span class="font-bold text-red-600">${sys.em.b_field || 0} T</span></div>
+                    <div class="flex justify-between border-b border-gray-300 py-1"><span>Induced EMF:</span> <span class="font-bold text-orange-600">${sys.em.emf_raw || 0} mV</span></div>
+                    <div class="flex justify-between border-b border-gray-300 py-1 bg-green-100 px-1"><span>Instant Flow:</span> <span class="font-bold text-green-700">${sys.em.lpm || 0} LPM</span></div>
+                    <div class="flex justify-between py-1 text-[10px] text-gray-500"><span>Electrode Health:</span> <span class="font-bold uppercase">${sys.em.health || 'OK'}</span></div>
+                `;
+            }
+            ttBody.innerHTML = html;
+        }
     </script>
 </body>
 </html>
