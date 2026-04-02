@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EcoFlow SCADA | Industrial Flow Control</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+    
+    <style>
+        @keyframes flow { 
+            from { stroke-dashoffset: 30; } 
+            to { stroke-dashoffset: 0; } 
+        }
+        .flow-active { animation: flow 1s linear infinite; }
+        .industrial-bg { background: radial-gradient(circle, #1a202c 0%, #0d1117 100%); }
+    </style>
+</head>
+<body class="industrial-bg text-gray-100 min-h-screen p-8 font-mono">
+
+    <div class="max-w-4xl mx-auto">
+        <header class="border-b border-green-900/50 pb-4 mb-8 flex justify-between items-center">
+            <div>
+                <h1 class="text-2xl font-bold text-green-400">ECOFLOW-IoT v1.0</h1>
+                <p class="text-xs text-gray-500 underline">NODE 4: SCADA INTERFACE</p>
+            </div>
+            <div id="conn-status" class="px-3 py-1 bg-red-900 text-red-200 text-xs rounded uppercase">Offline</div>
+        </header>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="bg-gray-900 border border-gray-800 p-6 rounded-lg shadow-xl">
+                <h2 class="text-sm text-gray-400 mb-4 uppercase tracking-widest font-bold">Live Flow Visualization</h2>
+                <div class="bg-black rounded-lg p-4 mb-4 border border-gray-800">
+                    <svg viewBox="0 0 400 60" class="w-full">
+                        <path d="M 0,30 L 400,30" stroke="#1f2937" stroke-width="20" stroke-linecap="round" fill="none" />
+                        <path id="flow-line" d="M 0,30 L 400,30" stroke="#00d4ff" stroke-width="12" stroke-dasharray="15, 15" fill="none" class="opacity-0" />
+                    </svg>
+                </div>
+                <div class="flex justify-between text-center">
+                    <div>
+                        <p class="text-xs text-gray-500">RAW SIGNAL</p>
+                        <p class="text-2xl font-bold text-blue-400"><span id="val-mv">0.00</span> <small class="text-sm">mV</small></p>
+                    </div>
+                    <div class="border-l border-gray-800 pl-6">
+                        <p class="text-xs text-gray-500">CALIBRATED FLOW</p>
+                        <p class="text-2xl font-bold text-green-400"><span id="val-lpm">0.00</span> <small class="text-sm">LPM</small></p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-gray-900 border border-gray-800 p-6 rounded-lg shadow-xl">
+                <h2 class="text-sm text-gray-400 mb-4 uppercase tracking-widest font-bold">System Command Center</h2>
+                <div class="space-y-4">
+                    <button onclick="sendCommand('STOP')" class="w-full bg-red-700 hover:bg-red-600 py-3 rounded font-bold transition-colors">EMERGENCY PUMP STOP</button>
+                    <button onclick="sendCommand('CALIBRATE')" class="w-full border border-gray-700 hover:bg-gray-800 py-3 rounded transition-colors text-sm">REQUEST CLOUD CALIBRATION</button>
+                </div>
+                <div class="mt-6 pt-6 border-t border-gray-800 text-xs text-gray-500">
+                    <p>Last Sync: <span id="last-sync">--:--:--</span></p>
+                    <p>Calibrator Node: <span class="text-yellow-600">HF-FASTAPI-ACTIVE</span></p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Your Exact Firebase Config for majortrial-1
+        const firebaseConfig = {
+            apiKey: "AIzaSyA9TrLnpHEsRijt8hbljFrJA0AU2c-Jk5g",
+            authDomain: "majortrial-1.firebaseapp.com",
+            databaseURL: "https://majortrial-1-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "majortrial-1",
+            storageBucket: "majortrial-1.firebasestorage.app",
+            messagingSenderId: "590621103333",
+            appId: "1:590621103333:web:0c98d6b783bc9f12dd300c"
+        };
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+
+        // DOM Elements
+        const flowLine = document.getElementById('flow-line');
+        const connStatus = document.getElementById('conn-status');
+
+        // Listen for data from ESP32 / ML Node
+        db.ref('telemetry/live_flow').on('value', (snap) => {
+            const data = snap.val();
+            if(!data) return;
+
+            // Update UI Numbers
+            if(data.mv !== undefined) document.getElementById('val-mv').innerText = data.mv.toFixed(2);
+            if(data.lpm !== undefined) document.getElementById('val-lpm').innerText = data.lpm.toFixed(2);
+            document.getElementById('last-sync').innerText = new Date().toLocaleTimeString();
+
+            // Control the 60fps CSS Animation Speed
+            if(data.lpm > 0.5) {
+                flowLine.classList.add('flow-active');
+                flowLine.classList.remove('opacity-0');
+                // Calculate dynamic speed: higher LPM = faster animation
+                const duration = Math.max(0.2, 2 / (data.lpm / 10)); 
+                flowLine.style.animationDuration = `${duration}s`;
+            } else {
+                flowLine.classList.remove('flow-active');
+                flowLine.classList.add('opacity-0');
+            }
+        });
+
+        // Online/Offline Check
+        db.ref('.info/connected').on('value', (snap) => {
+            if (snap.val() === true) {
+                connStatus.innerText = "Online";
+                connStatus.className = "px-3 py-1 bg-green-900 text-green-200 text-xs rounded uppercase shadow-[0_0_10px_rgba(34,197,94,0.5)]";
+            } else {
+                connStatus.innerText = "Offline";
+                connStatus.className = "px-3 py-1 bg-red-900 text-red-200 text-xs rounded uppercase";
+            }
+        });
+
+        // Send Commands to ESP32
+        function sendCommand(cmd) {
+            db.ref('system/control').set({ command: cmd, ts: Date.now() });
+            alert("Command pushed to cloud broker: " + cmd);
+        }
+    </script>
+</body>
+</html>
