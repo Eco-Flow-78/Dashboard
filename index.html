@@ -72,12 +72,12 @@
     
     /* Chart Container & Toggle */
     .chart-container { background: white; padding: 10px; border-radius: 4px; height: 160px; margin-top: 10px; margin-bottom: 10px; display: none; }
-    .toggle-btn { margin-left: 10px; padding: 3px 8px; background: #ED7D31; color: white; border: none; font-weight: bold; font-size: 10px; cursor: pointer; border-radius: 3px; }
+    .toggle-btn { margin-left: 10px; padding: 3px 8px; background: #ED7D31; color: white; border: none; font-weight: bold; font-size: 10px; cursor: pointer; border-radius: 3px; transition: background 0.2s; }
     .toggle-btn:hover { background: #C65911; }
 
     .control-row { display: flex; align-items: center; gap: 10px; margin-top: 15px; background: rgba(0,0,0,0.2); padding: 10px; border-radius: 4px; }
-    .control-row input { width: 60px; padding: 4px; font-family: 'JetBrains Mono'; font-weight: bold; text-align: center; border: none; border-radius: 2px; }
-    .control-row button { padding: 4px 12px; background: #ED7D31; color: white; border: none; font-weight: bold; cursor: pointer; border-radius: 2px; }
+    .control-row input { width: 60px; padding: 4px; font-family: 'JetBrains Mono'; font-weight: bold; text-align: center; border: none; border-radius: 2px; outline: none; }
+    .control-row button { padding: 4px 12px; background: #ED7D31; color: white; border: none; font-weight: bold; cursor: pointer; border-radius: 2px; transition: background 0.2s; }
     .control-row button:hover { background: #C65911; }
 </style>
 </head>
@@ -237,28 +237,28 @@
 
     <foreignObject x="1140" y="160" width="440" height="660">
         <div xmlns="http://www.w3.org/1999/xhtml" class="dash-panel">
-            <div class="dash-title">DASHBOARD</div>
+            <div class="dash-title">SYSTEM TELEMETRY</div>
             <ul class="dash-list">
-                <li>INSTANTANEOUS FLOW RATE: <span class="dash-val" id="v-flow">—</span> L/min</li>
-                <li>TOTAL VOLUME FLOW: <span class="dash-val" id="v-total">—</span> L</li>
-                <li>TIME FOR WHICH SYSTEM IS ON: <span class="dash-val" id="v-uptime">—</span></li>
+                <li>PROCESS FLOW RATE (PV): <span class="dash-val" id="v-flow">—</span> L/min</li>
+                <li>CUMULATIVE VOLUME: <span class="dash-val" id="v-total">—</span> L</li>
+                <li>ACTIVE PROCESS RUNTIME: <span class="dash-val" id="v-uptime">—</span></li>
                 
-                <li>GRAPH: RAW VS FILTERED EMF
-                    <button id="toggle-chart-btn" class="toggle-btn">GRAPHS</button>
+                <li>GRAPHS:
+                    <button id="toggle-chart-btn" class="toggle-btn">GRAPH</button>
                     <div class="chart-container" id="chart-wrapper">
                         <canvas id="flowChart"></canvas>
                     </div>
                 </li>
 
-                <li>RAW EMF GENERATED BEFORE IN-AMP: <span class="dash-val" id="v-raw">—</span> mV</li>
-                <li>EMF GENERATED AFTER ADC: <span class="dash-val" id="v-adc">—</span> counts</li>
-                <li>EMF AFTER KALMAN FILTER: <span class="dash-val" id="v-kalman">—</span> mV</li>
-                <li>SERVO MOTOR OPEN POSITION: <span class="dash-val" id="v-valve-act">—</span> %</li>
+                <li>PRE-AMP INDUCED EMF: <span class="dash-val" id="v-raw">—</span> mV</li>
+                <li>QUANTIZED ADC READING: <span class="dash-val" id="v-adc">—</span> counts</li>
+                <li>KALMAN FILTERED EMF: <span class="dash-val" id="v-kalman">—</span> mV</li>
+                <li>VALVE ACTUATOR POSITION: <span class="dash-val" id="v-valve-act">—</span> %</li>
                 <li>OFFSET (BASELINE) NO MAG FIELD: <span class="dash-val" id="v-offset">—</span> mV</li>
             </ul>
 
             <div class="control-row">
-                <span style="font-size: 12px; font-weight: bold;">SET VALVE %:</span>
+                <span style="font-size: 12px; font-weight: bold;">ACTUATOR SETPOINT TARGET:</span>
                 <input type="number" id="valve-input" min="0" max="100" placeholder="0"/>
                 <button id="valve-btn">APPLY</button>
                 <span id="valve-status" style="font-size: 11px; margin-left: auto;"></span>
@@ -299,7 +299,7 @@ const arrMain     = $('flow-arrows-main');
 const arrBypassPre= $('flow-arrows-bypass-pre');
 const arrBypassPost=$('flow-arrows-bypass-post');
 
-// TOGGLE GRAPH LOGIC
+// TOGGLE GRAPH
 const toggleBtn = $('toggle-chart-btn');
 const chartWrapper = $('chart-wrapper');
 toggleBtn.addEventListener('click', () => {
@@ -310,7 +310,7 @@ toggleBtn.addEventListener('click', () => {
     }
 });
 
-// CHART.JS RAW vs KALMAN
+// CHART.JS (RAW VS KALMAN)
 const ctx = $('flowChart').getContext('2d');
 const chart = new Chart(ctx, {
     type: 'line',
@@ -385,7 +385,7 @@ onValue(ref(db, 'telemetry'), snap => {
     arrBypassPre.classList.toggle('flowing', flow);
     arrBypassPost.classList.toggle('flowing', flow && vAct > 0);
 
-    // Update Text Data
+    // Update Data
     $('v-raw').textContent      = fmt(d.signals?.raw_emf, 4);
     $('v-adc').textContent      = d.signals?.adc_emf ?? '—';
     $('v-kalman').textContent   = fmt(d.signals?.kalman_emf, 4);
@@ -397,12 +397,10 @@ onValue(ref(db, 'telemetry'), snap => {
     $('v-total').textContent    = fmt(d.flow?.total, 1);
     $('v-uptime').textContent   = fmtTime(d.flow?.uptime || 0);
 
-    // Chart Rolling Update (Plots Raw vs Kalman)
+    // Update Chart
     chart.data.labels.push('');
-    chart.data.datasets[0].data.push(d.signals?.raw_emf || 0); // Raw EMF
-    chart.data.datasets[1].data.push(d.signals?.kalman_emf || 0); // Filtered EMF
-    
-    // Keep 50 points to show the noise vs clean signal effectively
+    chart.data.datasets[0].data.push(d.signals?.raw_emf || 0);
+    chart.data.datasets[1].data.push(d.signals?.kalman_emf || 0);
     if (chart.data.labels.length > 50) {
         chart.data.labels.shift();
         chart.data.datasets[0].data.shift();
@@ -423,7 +421,7 @@ function sendValve() {
     
     valveStat.style.color = '#FFD700'; valveStat.textContent = 'Sending...';
     set(ref(db, 'control/valve_setpoint'), val)
-        .then(() => { valveStat.style.color = '#00FF00'; valveStat.textContent = `Set to ${val}%`; })
+        .then(() => { valveStat.style.color = '#00FF00'; valveStat.textContent = `Set to ${val}%`; valveInput.value = ''; })
         .catch(e => { valveStat.style.color = 'red'; valveStat.textContent = 'Error'; });
 }
 valveBtn.addEventListener('click', sendValve);
