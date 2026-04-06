@@ -3,8 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>EcoFlow-IoT | Flow/EMF Schematic Dashboard</title>
-    
+<title>EcoFlow-IoT | Industrial SCADA HMI</title>
 
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=JetBrains+Mono:wght@400;700;800&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
@@ -14,12 +13,20 @@
        1. COLOR PALETTE
     ========================================== */
     :root {
-        --bg-color: #FFFFFF; /* Pure white background */
+        --bg-color: #f1f5f9;
         --pipe-white: #FFFFFF;
-        --pipe-border: #111111;
+        --pipe-border: #1e293b;
         --water-flow: #3b82f6;
-        --dash-bg: #4472C4;
-        --box-blue: #4472C4;
+        
+        --box-bg: #ffffff;
+        --text-dark: #0f172a;
+        --text-muted: #64748b;
+        
+        --lcd-bg: #ffffff;
+        --lcd-border: #cbd5e1;
+        --val-blue: #0284c7;
+        --val-green: #059669;
+        --val-amber: #d97706;
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -36,7 +43,7 @@
     }
 
     /* ==========================================
-       2. SCADA CANVAS
+       2. SCADA CANVAS & OVERLAYS
     ========================================== */
     .scada-wrap { 
         flex: 1; overflow: auto; position: relative; padding: 20px; 
@@ -45,8 +52,28 @@
     .scada-wrap svg { 
         display: block; max-width: 100%; max-height: 100%; 
         width: 1600px; height: 900px; 
-        box-shadow: 0 4px 12px rgba(0,0,0,0.05); 
+        box-shadow: 0 4px 24px rgba(0,0,0,0.08); 
         background: #FFFFFF; 
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+    }
+
+    /* Chart Modal Overlay */
+    .chart-overlay {
+        display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; 
+        background: rgba(15, 23, 42, 0.8); z-index: 9999; backdrop-filter: blur(4px);
+        align-items: center; justify-content: center;
+    }
+    .chart-overlay.active { display: flex; }
+    .enlarged-chart-container {
+        width: 85vw; height: 80vh; background: #ffffff; padding: 10px; 
+        border-radius: 8px; box-shadow: 0 10px 40px rgba(0,0,0,0.3); position: relative;
+        display: flex; flex-direction: column;
+    }
+    #close-modal-btn {
+        position: absolute; top: -15px; right: -15px; background: #ef4444; color: white;
+        border: none; border-radius: 50%; width: 40px; height: 40px; font-weight: bold; 
+        cursor: pointer; box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
     }
 
     /* ==========================================
@@ -55,34 +82,73 @@
     .pipe-core { transition: stroke 0.4s ease; }
     .flowing { stroke: var(--water-flow) !important; opacity: 1 !important; }
     
-    .flow-arrow { fill: #2E75B6; font-size: 20px; font-weight: bold; opacity: 0; transition: opacity 0.3s; }
-    
     @keyframes spin { to { transform: rotate(360deg); } }
-    .spinning { animation: spin 0.6s linear infinite; transform-origin: center; transform-box: fill-box; }
-    
-    .hover-target { cursor: pointer; transition: filter 0.2s; }
-    .hover-target:hover { filter: drop-shadow(0 0 6px rgba(68, 114, 196, 0.6)); }
+    .spinning { animation: spin 0.8s linear infinite; transform-origin: center; transform-box: fill-box; }
 
     /* ==========================================
        4. DASHBOARD PANEL
     ========================================== */
-    .dash-panel { background: var(--dash-bg); border: 2px solid #2F528F; width: 100%; height: 100%; color: white; padding: 24px; display: flex; flex-direction: column; }
-    .dash-title { text-align: center; font-size: 16px; font-weight: 800; margin-bottom: 20px; text-transform: uppercase; }
-    .dash-list { list-style-type: square; padding-left: 20px; font-size: 13px; font-weight: 600; line-height: 2; flex: 1; }
-    .dash-val { font-family: 'JetBrains Mono', monospace; font-size: 14px; font-weight: 800; color: #FFD700; background: rgba(0,0,0,0.2); padding: 2px 6px; border-radius: 3px; }
+    .dash-panel { 
+        background: #ffffff; border: 1px solid #e2e8f0; 
+        width: 100%; height: 100%; color: var(--text-dark); 
+        padding: 24px; display: flex; flex-direction: column; 
+        border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+    }
+    .dash-title { 
+        text-align: center; font-size: 18px; font-weight: 800; 
+        margin-bottom: 15px; text-transform: uppercase; 
+        color: var(--text-dark); border-bottom: 2px solid #f1f5f9; padding-bottom: 15px;
+    }
     
-    /* Chart Container & Toggle */
-    .chart-container { background: white; padding: 10px; border-radius: 4px; height: 160px; margin-top: 10px; margin-bottom: 10px; display: none; }
-    .toggle-btn { margin-left: 10px; padding: 3px 8px; background: #ED7D31; color: white; border: none; font-weight: bold; font-size: 10px; cursor: pointer; border-radius: 3px; transition: background 0.2s; }
-    .toggle-btn:hover { background: #C65911; }
+    .dash-list { list-style-type: none; font-size: 13px; font-weight: 800; line-height: 2.5; }
+    .dash-list li { border-bottom: 1px solid #f8fafc; padding: 8px 0; display: flex; justify-content: space-between; align-items: center; color: #334155; }
+    
+    .dash-val-box { 
+        font-family: 'JetBrains Mono', monospace; font-size: 14px; font-weight: 800; 
+        background: #ffffff; border: 1px solid #e2e8f0;
+        padding: 4px 12px; border-radius: 4px; min-width: 100px; text-align: right;
+    }
 
-    .control-row { display: flex; align-items: center; gap: 10px; margin-top: 15px; background: rgba(0,0,0,0.2); padding: 10px; border-radius: 4px; }
-    .control-row input { width: 60px; padding: 4px; font-family: 'JetBrains Mono'; font-weight: bold; text-align: center; border: none; border-radius: 2px; outline: none; }
-    .control-row button { padding: 4px 12px; background: #ED7D31; color: white; border: none; font-weight: bold; cursor: pointer; border-radius: 2px; transition: background 0.2s; }
-    .control-row button:hover { background: #C65911; }
+    .chart-container { 
+        background: #ffffff; padding: 10px; border: 1px solid #e2e8f0; border-radius: 6px; 
+        height: 200px; margin-top: 15px; margin-bottom: 15px; display: block; 
+        cursor: pointer; position: relative; transition: border-color 0.2s;
+    }
+    .chart-container:hover { border-color: #3b82f6; }
+    .chart-container::after {
+        content: "🔍 CLICK TO ENLARGE"; position: absolute; top: 10px; right: 10px; 
+        font-size: 10px; font-weight: bold; color: var(--text-muted); pointer-events: none;
+    }
+
+    /* ==========================================
+       5. IN-SITU CONTROLS & SWITCHES
+    ========================================== */
+    .in-situ-control {
+        background: #ffffff; border: 1px solid #cbd5e1; padding: 10px; border-radius: 6px;
+        display: flex; flex-direction: column; align-items: center; gap: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    }
+    .in-situ-control input { width: 60px; padding: 6px; font-family: 'JetBrains Mono'; font-weight: bold; text-align: center; border: 1px solid #cbd5e1; border-radius: 4px; outline: none; color: var(--val-blue); }
+    .in-situ-control button { padding: 6px 16px; background: #3b82f6; color: white; border: none; font-weight: bold; cursor: pointer; border-radius: 4px; font-size: 12px; transition: background 0.2s; }
+    .in-situ-control button:hover { background: #2563eb; }
+
+    .switch { position: relative; display: inline-block; width: 44px; height: 24px; }
+    .switch input { opacity: 0; width: 0; height: 0; }
+    .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #cbd5e1; transition: .4s; border-radius: 24px; }
+    .slider:before { position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; box-shadow: 0 1px 3px rgba(0,0,0,0.2); }
+    input:checked + .slider { background-color: #10b981; }
+    input:checked + .slider:before { transform: translateX(20px); }
+    .switch-label { font-size: 10px; font-weight: bold; color: var(--text-muted); margin-bottom: 2px; text-align: center; }
+
+    .digital-text { font-family: 'JetBrains Mono', monospace; font-weight: bold; }
 </style>
 </head>
 <body>
+
+<div class="chart-overlay" id="chart-overlay">
+    <div class="enlarged-chart-container" id="modal-chart-wrapper">
+        <button id="close-modal-btn">X</button>
+        </div>
+</div>
 
 <div class="scada-wrap">
 <svg viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg">
@@ -90,22 +156,25 @@
     <defs>
         <linearGradient id="tank-metal" x1="0" y1="0" x2="1" y2="0">
             <stop offset="0%" stop-color="#cbd5e1"/>
-            <stop offset="20%" stop-color="#f8fafc"/>
-            <stop offset="80%" stop-color="#94a3b8"/>
-            <stop offset="100%" stop-color="#64748b"/>
+            <stop offset="20%" stop-color="#f1f5f9"/>
+            <stop offset="80%" stop-color="#e2e8f0"/>
+            <stop offset="100%" stop-color="#94a3b8"/>
         </linearGradient>
         <linearGradient id="water-grad" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stop-color="rgba(59, 130, 246, 0.4)"/>
-            <stop offset="100%" stop-color="rgba(30, 58, 138, 0.6)"/>
+            <stop offset="0%" stop-color="rgba(59, 130, 246, 0.2)"/>
+            <stop offset="100%" stop-color="rgba(30, 64, 175, 0.4)"/>
         </linearGradient>
     </defs>
 
-    <rect x="420" y="160" width="760" height="660" fill="white" stroke="#B0B0B0" stroke-width="2"/>
+    <rect x="50" y="330" width="250" height="540" fill="url(#tank-metal)" stroke="var(--pipe-border)" stroke-width="3" rx="10"/>
 
-    <rect x="50" y="330" width="250" height="540" fill="url(#tank-metal)" stroke="#475569" stroke-width="3" rx="10"/>
+    <g id="rear-wires">
+        <path d="M 900,440 Q 860,330 670,180" fill="none" stroke="var(--pipe-border)" stroke-width="3"/>
+    </g>
 
     <g id="pipe-borders">
-        <path d="M 120,760 V 650 H 230 V 760 M 175,650 V 440 H 370" stroke="var(--pipe-border)" stroke-width="26" fill="none" stroke-linejoin="round" stroke-linecap="round"/>
+        <path d="M 120,760 V 650 H 230 V 760" stroke="var(--pipe-border)" stroke-width="26" fill="none" stroke-linejoin="round" stroke-linecap="round"/>
+        <path d="M 175,650 V 440 H 370" stroke="var(--pipe-border)" stroke-width="32" fill="none" stroke-linejoin="round" stroke-linecap="round"/>
         <path d="M 370,440 H 1080 V 710 H 270" stroke="var(--pipe-border)" stroke-width="32" fill="none" stroke-linejoin="round" stroke-linecap="butt"/>
         <path d="M 785,440 V 600 H 270" stroke="var(--pipe-border)" stroke-width="22" fill="none" stroke-linejoin="round" stroke-linecap="butt"/>
     </g>
@@ -113,157 +182,176 @@
     <g id="pipe-interiors">
         <path id="core-leg-a" d="M 120,760 V 650 H 175" stroke="var(--pipe-white)" stroke-width="18" fill="none" class="pipe-core" stroke-linejoin="round" stroke-linecap="round"/>
         <path id="core-leg-b" d="M 230,760 V 650 H 175" stroke="var(--pipe-white)" stroke-width="18" fill="none" class="pipe-core" stroke-linejoin="round" stroke-linecap="round"/>
-        <path id="core-trunk" d="M 175,650 V 440 H 370" stroke="var(--pipe-white)" stroke-width="18" fill="none" class="pipe-core" stroke-linejoin="round" stroke-linecap="round"/>
+        <path id="core-trunk" d="M 175,650 V 440 H 370" stroke="var(--pipe-white)" stroke-width="26" fill="none" class="pipe-core" stroke-linejoin="round" stroke-linecap="round"/>
         
         <path id="core-main-loop" d="M 370,440 H 1080 V 710 H 270" stroke="var(--pipe-white)" stroke-width="26" fill="none" class="pipe-core" stroke-linejoin="round" stroke-linecap="butt"/>
         <path id="core-bypass-pre" d="M 785,440 V 600 H 690" stroke="var(--pipe-white)" stroke-width="16" fill="none" class="pipe-core" stroke-linejoin="round" stroke-linecap="round"/>
         <path id="core-bypass-post" d="M 650,600 H 270" stroke="var(--pipe-white)" stroke-width="16" fill="none" class="pipe-core" stroke-linejoin="round" stroke-linecap="butt"/>
     </g>
 
-    <circle cx="175" cy="650" r="16" fill="var(--box-blue)" stroke="var(--pipe-border)" stroke-width="2"/>
+    <circle cx="175" cy="650" r="20" fill="#94a3b8" stroke="var(--pipe-border)" stroke-width="2"/>
 
-    <g transform="translate(120, 760)" class="hover-target" onclick="togglePump('a')">
-        <circle cx="0" cy="0" r="35" fill="#D9E1F2" stroke="var(--pipe-border)" stroke-width="2"/>
-        <circle cx="0" cy="0" r="28" fill="#E8EAF6" stroke="var(--pipe-border)" stroke-width="1"/>
-        <path id="gear-a" d="M -16,-16 L 16,16 M -16,16 L 16,-16" stroke="#4472C4" stroke-width="5" stroke-linecap="round"/>
+    <g transform="translate(120, 760)">
+        <circle cx="0" cy="0" r="35" fill="#e2e8f0" stroke="var(--pipe-border)" stroke-width="2"/>
+        <circle cx="0" cy="0" r="28" fill="#f8fafc" stroke="var(--pipe-border)" stroke-width="1"/>
+        <path id="gear-a" d="M -16,-16 L 16,16 M -16,16 L 16,-16" stroke="#3b82f6" stroke-width="5" stroke-linecap="round"/>
     </g>
-    <text x="120" y="815" font-family="Inter" font-size="11" font-weight="800" fill="#222" text-anchor="middle">MOTOR A</text>
-    <text x="120" y="830" font-family="Inter" font-size="9" fill="#222" text-anchor="middle">(AC220V-18W-1100L/HR)</text>
+    <text x="120" y="815" font-family="Inter" font-size="11" font-weight="800" fill="var(--text-dark)" text-anchor="middle">MOTOR A</text>
+    
+    <foreignObject x="90" y="825" width="60" height="50">
+        <div xmlns="http://www.w3.org/1999/xhtml" style="display:flex; flex-direction:column; align-items:center;">
+            <div class="switch-label">ON/OFF</div>
+            <label class="switch"><input type="checkbox" id="toggle-ma"><span class="slider"></span></label>
+        </div>
+    </foreignObject>
 
-    <g transform="translate(230, 760)" class="hover-target" onclick="togglePump('b')">
-        <circle cx="0" cy="0" r="35" fill="#D9E1F2" stroke="var(--pipe-border)" stroke-width="2"/>
-        <circle cx="0" cy="0" r="28" fill="#E8EAF6" stroke="var(--pipe-border)" stroke-width="1"/>
-        <path id="gear-b" d="M -16,-16 L 16,16 M -16,16 L 16,-16" stroke="#4472C4" stroke-width="5" stroke-linecap="round"/>
+    <g transform="translate(230, 760)">
+        <circle cx="0" cy="0" r="35" fill="#e2e8f0" stroke="var(--pipe-border)" stroke-width="2"/>
+        <circle cx="0" cy="0" r="28" fill="#f8fafc" stroke="var(--pipe-border)" stroke-width="1"/>
+        <path id="gear-b" d="M -16,-16 L 16,16 M -16,16 L 16,-16" stroke="#3b82f6" stroke-width="5" stroke-linecap="round"/>
     </g>
-    <text x="230" y="815" font-family="Inter" font-size="11" font-weight="800" fill="#222" text-anchor="middle">MOTOR B</text>
-    <text x="230" y="830" font-family="Inter" font-size="9" fill="#222" text-anchor="middle">(AC220V-18W-1100L/HR)</text>
+    <text x="230" y="815" font-family="Inter" font-size="11" font-weight="800" fill="var(--text-dark)" text-anchor="middle">MOTOR B</text>
+
+    <foreignObject x="200" y="825" width="60" height="50">
+        <div xmlns="http://www.w3.org/1999/xhtml" style="display:flex; flex-direction:column; align-items:center;">
+            <div class="switch-label">ON/OFF</div>
+            <label class="switch"><input type="checkbox" id="toggle-mb"><span class="slider"></span></label>
+        </div>
+    </foreignObject>
 
     <rect x="52" y="440" width="246" height="428" fill="url(#water-grad)" rx="8" pointer-events="none"/>
-    <ellipse cx="175" cy="440" rx="123" ry="12" fill="rgba(96, 165, 250, 0.5)" pointer-events="none"/>
+    <ellipse cx="175" cy="440" rx="123" ry="12" fill="rgba(96, 165, 250, 0.4)" pointer-events="none"/>
 
-    <ellipse cx="175" cy="330" rx="125" ry="25" fill="#94a3b8" stroke="#475569" stroke-width="3"/>
-    <ellipse cx="175" cy="325" rx="90" ry="15" fill="#cbd5e1" stroke="#64748b" stroke-width="2"/>
+    <ellipse cx="175" cy="330" rx="125" ry="25" fill="#94a3b8" stroke="var(--pipe-border)" stroke-width="3"/>
+    <ellipse cx="175" cy="325" rx="90" ry="15" fill="#e2e8f0" stroke="#64748b" stroke-width="2"/>
     
-    <text x="175" y="385" font-family="Inter" font-size="22" font-weight="800" fill="#1e293b" text-anchor="middle" letter-spacing="1">WATER</text>
-    <text x="175" y="415" font-family="Inter" font-size="22" font-weight="800" fill="#1e293b" text-anchor="middle" letter-spacing="1">RESERVOIR</text>
-    
-    <text x="365" y="415" font-family="Inter" font-size="8" font-weight="800" fill="#475569" text-anchor="end">CONNECTOR CONNECTING PVC PIPES</text>
-    <text x="365" y="426" font-family="Inter" font-size="8" font-weight="800" fill="#475569" text-anchor="end">WITH WATER RESERVOIR</text>
-
-    <g id="flow-arrows-main" class="flow-arrow">
-        <text x="450" y="448">→</text> <text x="550" y="448">→</text> <text x="620" y="448">→</text> <text x="850" y="448">→</text>
-        <text x="1086" y="550" transform="rotate(90, 1086, 550)">→</text> 
-        <text x="1086" y="650" transform="rotate(90, 1086, 650)">→</text>
-        <text x="950" y="718">←</text> <text x="750" y="718">←</text> <text x="550" y="718">←</text> <text x="350" y="718">←</text>
-    </g>
-    <g id="flow-arrows-bypass-pre" class="flow-arrow">
-        <text x="793" y="520" transform="rotate(90, 793, 520)">→</text>
-    </g>
-    <g id="flow-arrows-bypass-post" class="flow-arrow">
-        <text x="550" y="608">←</text> <text x="350" y="608">←</text>
-    </g>
-
-    <text x="450" y="415" font-family="Inter" font-size="14" font-weight="800" fill="#222">1 INCH PIPE</text>
-    <text x="450" y="575" font-family="Inter" font-size="14" font-weight="800" fill="#222">½ INCH PIPE</text>
-    <text x="450" y="685" font-family="Inter" font-size="14" font-weight="800" fill="#222">1 INCH PIPE</text>
+    <text x="175" y="385" font-family="Inter" font-size="22" font-weight="800" fill="var(--text-dark)" text-anchor="middle" letter-spacing="1">WATER</text>
+    <text x="175" y="415" font-family="Inter" font-size="22" font-weight="800" fill="var(--text-dark)" text-anchor="middle" letter-spacing="1">RESERVOIR</text>
 
     <g transform="translate(650, 585)">
-        <rect x="0" y="0" width="40" height="30" fill="#FF0000" stroke="var(--pipe-border)" stroke-width="2"/>
-        <text x="20" y="13" font-family="Inter" font-size="9" font-weight="800" fill="white" text-anchor="middle">BALL</text>
-        <text x="20" y="23" font-family="Inter" font-size="9" font-weight="800" fill="white" text-anchor="middle">VALVE</text>
-        <rect x="15" y="-10" width="10" height="10" fill="#222"/>
-        <rect x="-10" y="-45" width="60" height="35" fill="var(--box-blue)" stroke="var(--pipe-border)" stroke-width="2" rx="4"/>
-        <text x="20" y="-28" font-family="Inter" font-size="10" font-weight="800" fill="white" text-anchor="middle">SERVO</text>
-        <text x="20" y="-16" font-family="Inter" font-size="10" font-weight="800" fill="white" text-anchor="middle">MOTOR</text>
+        <rect x="0" y="0" width="40" height="30" fill="#ef4444" stroke="var(--pipe-border)" stroke-width="2" rx="2"/>
+        <text x="20" y="19" font-family="Inter" font-size="10" font-weight="800" fill="white" text-anchor="middle">VALVE</text>
+        <rect x="15" y="-10" width="10" height="10" fill="var(--pipe-border)"/>
+        <rect x="-10" y="-45" width="60" height="35" fill="#f8fafc" stroke="var(--pipe-border)" stroke-width="2" rx="4"/>
+        <text x="20" y="-28" font-family="Inter" font-size="9" font-weight="800" fill="var(--text-muted)" text-anchor="middle">ACTUATOR</text>
+        <text x="20" y="-16" font-family="Inter" font-size="10" font-weight="800" fill="var(--text-dark)" text-anchor="middle">SERVO</text>
     </g>
 
-    <path d="M 750,420 H 820 V 460 H 800 V 490 H 770 V 460 H 750 Z" fill="var(--box-blue)" stroke="var(--pipe-border)" stroke-width="2" stroke-linejoin="round"/>
+    <foreignObject x="450" y="490" width="140" height="160">
+        <div xmlns="http://www.w3.org/1999/xhtml" class="in-situ-control" style="gap: 4px;">
+            <span style="font-size: 10px; font-weight: bold; color: var(--text-muted);">VALVE POSITION</span>
+            <span id="v-valve-act-html" class="digital-text" style="font-size: 18px; color: var(--val-blue); padding: 4px 0;">--- %</span>
+            
+            <button id="show-adjust-btn" style="width: 100%; font-size: 10px; padding: 6px;">ADJUST</button>
+
+            <div id="valve-input-card" style="display:none; flex-direction:column; align-items:center; background: #f8fafc; border: 1px solid #cbd5e1; padding: 8px; border-radius: 4px; margin-top: 6px; width: 100%;">
+                 <div style="display:flex; gap: 6px;">
+                    <input type="number" id="valve-input" min="0" max="100" placeholder="0" style="width: 50px; font-size: 12px;"/>
+                    <button id="valve-btn" style="padding: 4px 10px; font-size: 10px;">SET</button>
+                </div>
+                <span id="valve-status" style="font-size: 9px; font-weight: bold; margin-top:6px;"></span>
+            </div>
+        </div>
+    </foreignObject>
+
+    <path d="M 750,420 H 820 V 460 H 800 V 490 H 770 V 460 H 750 Z" fill="#94a3b8" stroke="var(--pipe-border)" stroke-width="2" stroke-linejoin="round"/>
 
     <g id="electro-magnet">
-        <path d="M 850,345 H 950 V 425 H 930 V 365 H 910 V 425 H 890 V 365 H 870 V 425 H 850 Z"
-              fill="#94a3b8" stroke="var(--pipe-border)" stroke-width="2" stroke-linejoin="round"/>
+        <path d="M 850,345 H 950 V 365 H 914 V 425 H 886 V 365 H 850 Z" fill="#cbd5e1" stroke="var(--pipe-border)" stroke-width="2" stroke-linejoin="round"/>
+        <path d="M 850,535 H 950 V 515 H 914 V 455 H 886 V 515 H 850 Z" fill="#cbd5e1" stroke="var(--pipe-border)" stroke-width="2" stroke-linejoin="round"/>
 
-        <path d="M 850,535 H 950 V 455 H 930 V 515 H 910 V 455 H 890 V 515 H 870 V 455 H 850 Z"
-              fill="#94a3b8" stroke="var(--pipe-border)" stroke-width="2" stroke-linejoin="round"/>
+        <rect id="coil-a-bg" x="886" y="375" width="28" height="40" fill="#94a3b8" stroke="#111" stroke-width="1.5" rx="2" style="transition: fill 0.3s;"/>
+        <line x1="886" x2="914" y1="383" y2="383" stroke="#111" stroke-width="1.5"/>
+        <line x1="886" x2="914" y1="391" y2="391" stroke="#111" stroke-width="1.5"/>
+        <line x1="886" x2="914" y1="399" y2="399" stroke="#111" stroke-width="1.5"/>
+        <line x1="886" x2="914" y1="407" y2="407" stroke="#111" stroke-width="1.5"/>
 
-        <rect x="886" y="375" width="28" height="40" fill="#D2691E" stroke="#111" stroke-width="1.5" rx="2"/>
-        <line x1="886" x2="914" y1="383" y2="383" stroke="#8B4513" stroke-width="1.5"/>
-        <line x1="886" x2="914" y1="391" y2="391" stroke="#8B4513" stroke-width="1.5"/>
-        <line x1="886" x2="914" y1="399" y2="399" stroke="#8B4513" stroke-width="1.5"/>
-        <line x1="886" x2="914" y1="407" y2="407" stroke="#8B4513" stroke-width="1.5"/>
+        <rect id="coil-b-bg" x="886" y="465" width="28" height="40" fill="#94a3b8" stroke="#111" stroke-width="1.5" rx="2" style="transition: fill 0.3s;"/>
+        <line x1="886" x2="914" y1="473" y2="473" stroke="#111" stroke-width="1.5"/>
+        <line x1="886" x2="914" y1="481" y2="481" stroke="#111" stroke-width="1.5"/>
+        <line x1="886" x2="914" y1="489" y2="489" stroke="#111" stroke-width="1.5"/>
+        <line x1="886" x2="914" y1="497" y2="497" stroke="#111" stroke-width="1.5"/>
 
-        <rect x="886" y="465" width="28" height="40" fill="#D2691E" stroke="#111" stroke-width="1.5" rx="2"/>
-        <line x1="886" x2="914" y1="473" y2="473" stroke="#8B4513" stroke-width="1.5"/>
-        <line x1="886" x2="914" y1="481" y2="481" stroke="#8B4513" stroke-width="1.5"/>
-        <line x1="886" x2="914" y1="489" y2="489" stroke="#8B4513" stroke-width="1.5"/>
-        <line x1="886" x2="914" y1="497" y2="497" stroke="#8B4513" stroke-width="1.5"/>
-
-        <circle cx="900" cy="440" r="10" fill="#e2e8f0" stroke="var(--pipe-border)" stroke-width="2"/>
+        <circle cx="900" cy="440" r="10" fill="#ffffff" stroke="var(--pipe-border)" stroke-width="2"/>
         <circle cx="900" cy="440" r="4" fill="#94a3b8" stroke="var(--pipe-border)" stroke-width="1"/>
-
-        <text x="900" y="330" font-family="Inter" font-size="12" font-weight="800" fill="#222" text-anchor="middle">ELECTRO-MAGNET</text>
-        <text x="965" y="400" font-family="Inter" font-size="10" font-weight="800" fill="#222">COPPER</text>
-        <text x="965" y="414" font-family="Inter" font-size="10" font-weight="800" fill="#222">WINDINGS</text>
-        <line x1="960" y1="405" x2="914" y2="405" stroke="#222" stroke-width="1.5"/>
-        <line x1="960" y1="405" x2="914" y2="480" stroke="#222" stroke-width="1.5"/>
     </g>
+
+    <foreignObject x="970" y="360" width="70" height="60">
+        <div xmlns="http://www.w3.org/1999/xhtml" style="display:flex; flex-direction:column; align-items:center;">
+            <div class="switch-label" style="color: var(--text-dark);">COIL A</div>
+            <div class="switch-label">ON/OFF</div>
+            <label class="switch"><input type="checkbox" id="toggle-ema"><span class="slider"></span></label>
+        </div>
+    </foreignObject>
+    <foreignObject x="970" y="490" width="70" height="60">
+        <div xmlns="http://www.w3.org/1999/xhtml" style="display:flex; flex-direction:column; align-items:center;">
+            <div class="switch-label" style="color: var(--text-dark);">COIL B</div>
+            <div class="switch-label">ON/OFF</div>
+            <label class="switch"><input type="checkbox" id="toggle-emb"><span class="slider"></span></label>
+        </div>
+    </foreignObject>
 
     <g id="signal-blocks">
-        <path d="M 900,440 Q 800,480 660,290" fill="none" stroke="#222" stroke-width="3"/>
-        <path d="M 900,430 Q 820,400 670,290" fill="none" stroke="#222" stroke-width="3"/>
+        <path d="M 900,440 Q 800,480 650,180" fill="none" stroke="var(--pipe-border)" stroke-width="3"/>
         
-        <text x="780" y="320" font-family="Inter" font-size="10" font-weight="800" fill="#222" text-anchor="middle">2 ELECTRODES</text>
-        <text x="780" y="334" font-family="Inter" font-size="10" font-weight="800" fill="#222" text-anchor="middle">ARE CONNECTED</text>
-        <text x="780" y="348" font-family="Inter" font-size="10" font-weight="800" fill="#222" text-anchor="middle">TO AD620</text>
+        <rect x="600" y="110" width="120" height="75" fill="#ffffff" stroke="var(--lcd-border)" stroke-width="2" rx="4"/>
+        <text x="660" y="125" id="amp-status" font-family="JetBrains Mono" font-size="9" font-weight="bold" fill="var(--text-muted)" text-anchor="middle">STATUS: WAIT</text>
+        <text x="660" y="142" font-family="Inter" font-size="9" font-weight="800" fill="var(--text-muted)" text-anchor="middle">INSTRUMENTATION</text>
+        <text x="660" y="157" font-family="Inter" font-size="9" font-weight="800" fill="var(--text-muted)" text-anchor="middle">AMPLIFIER</text>
+        <text x="660" y="175" font-family="Inter" font-size="12" font-weight="800" fill="var(--text-dark)" text-anchor="middle">AD620</text>
+        <path d="M 720,145 L 740,145 L 740,140 L 755,150 L 740,160 L 740,155 L 720,155 Z" fill="#3b82f6" stroke="var(--pipe-border)" stroke-width="1"/>
 
-        <rect x="600" y="220" width="120" height="70" fill="var(--box-blue)" stroke="var(--pipe-border)" stroke-width="2"/>
-        <text x="660" y="245" font-family="Inter" font-size="10" font-weight="800" fill="white" text-anchor="middle">INSTRUMENTATION</text>
-        <text x="660" y="260" font-family="Inter" font-size="10" font-weight="800" fill="white" text-anchor="middle">AMPLIFIER</text>
-        <text x="660" y="275" font-family="Inter" font-size="10" fill="white" text-anchor="middle">AD620</text>
-        <path d="M 720,250 L 740,250 L 740,245 L 755,255 L 740,265 L 740,260 L 720,260 Z" fill="#ED7D31" stroke="var(--pipe-border)" stroke-width="1"/>
+        <rect x="760" y="110" width="90" height="75" fill="#ffffff" stroke="var(--lcd-border)" stroke-width="2" rx="4"/>
+        <text x="805" y="145" font-family="Inter" font-size="10" font-weight="800" fill="var(--text-muted)" text-anchor="middle">HARDWARE</text>
+        <text x="805" y="165" font-family="Inter" font-size="12" font-weight="800" fill="var(--text-dark)" text-anchor="middle">RC FILTER</text>
+        <path d="M 850,145 L 870,145 L 870,140 L 885,150 L 870,160 L 870,155 L 850,155 Z" fill="#3b82f6" stroke="var(--pipe-border)" stroke-width="1"/>
 
-        <rect x="760" y="220" width="90" height="70" fill="var(--box-blue)" stroke="var(--pipe-border)" stroke-width="2"/>
-        <text x="805" y="260" font-family="Inter" font-size="12" font-weight="800" fill="white" text-anchor="middle">RC FILTER</text>
-        <path d="M 850,250 L 870,250 L 870,245 L 885,255 L 870,265 L 870,260 L 850,260 Z" fill="#ED7D31" stroke="var(--pipe-border)" stroke-width="1"/>
-
-        <rect x="890" y="220" width="90" height="70" fill="var(--box-blue)" stroke="var(--pipe-border)" stroke-width="2"/>
-        <text x="935" y="250" font-family="Inter" font-size="11" font-weight="800" fill="white" text-anchor="middle">16BIT-ADC</text>
-        <text x="935" y="265" font-family="Inter" font-size="11" fill="white" text-anchor="middle">AS1115</text>
-        <path d="M 980,250 L 1000,250 L 1000,245 L 1015,255 L 1000,265 L 1000,260 L 980,260 Z" fill="#ED7D31" stroke="var(--pipe-border)" stroke-width="1"/>
-
-        <rect x="1020" y="220" width="80" height="70" fill="var(--box-blue)" stroke="var(--pipe-border)" stroke-width="2"/>
-        <text x="1060" y="260" font-family="Inter" font-size="14" font-weight="800" fill="white" text-anchor="middle">ESP32</text>
-        <path d="M 1100,250 L 1120,250 L 1120,245 L 1135,255 L 1120,265 L 1120,260 L 1100,260 Z" fill="#ED7D31" stroke="var(--pipe-border)" stroke-width="1"/>
+        <rect x="890" y="110" width="90" height="75" fill="#ffffff" stroke="var(--lcd-border)" stroke-width="2" rx="4"/>
+        <text x="935" y="125" id="adc-status" font-family="JetBrains Mono" font-size="9" font-weight="bold" fill="var(--text-muted)" text-anchor="middle">STATUS: WAIT</text>
+        <text x="935" y="150" font-family="Inter" font-size="10" font-weight="800" fill="var(--text-muted)" text-anchor="middle">16-BIT ADC</text>
+        <text x="935" y="170" font-family="Inter" font-size="12" font-weight="800" fill="var(--text-dark)" text-anchor="middle">AS1115</text>
     </g>
 
-    <foreignObject x="1140" y="160" width="440" height="660">
+    <g transform="translate(420, 360)">
+        <rect width="150" height="46" fill="var(--lcd-bg)" rx="4" stroke="var(--lcd-border)" stroke-width="2"/>
+        <text x="75" y="16" font-family="Inter" font-size="10" font-weight="800" fill="var(--text-muted)" text-anchor="middle">PROCESS FLOW RATE</text>
+        <text id="v-flow" x="75" y="36" class="digital-text" font-size="15" fill="var(--val-blue)" text-anchor="middle">--- L/min</text>
+    </g>
+
+    <g transform="translate(450, 120)">
+        <rect width="140" height="46" fill="var(--lcd-bg)" rx="4" stroke="var(--lcd-border)" stroke-width="2"/>
+        <text x="70" y="16" font-family="Inter" font-size="10" font-weight="800" fill="var(--text-muted)" text-anchor="middle">PRE-AMP INDUCED EMF</text>
+        <text id="v-raw" x="70" y="36" class="digital-text" font-size="15" fill="var(--val-amber)" text-anchor="middle">--- mV</text>
+    </g>
+
+    <g transform="translate(1000, 120)">
+        <rect width="140" height="46" fill="var(--lcd-bg)" rx="4" stroke="var(--lcd-border)" stroke-width="2"/>
+        <text x="70" y="16" font-family="Inter" font-size="10" font-weight="800" fill="var(--text-muted)" text-anchor="middle">QUANTIZED ADC</text>
+        <text id="v-adc" x="70" y="36" class="digital-text" font-size="15" fill="var(--val-amber)" text-anchor="middle">--- cnts</text>
+    </g>
+
+    <foreignObject x="1170" y="160" width="410" height="660">
         <div xmlns="http://www.w3.org/1999/xhtml" class="dash-panel">
             <div class="dash-title">SYSTEM TELEMETRY</div>
+            
+            <div style="font-size: 13px; color: var(--text-muted); font-weight: bold; margin-bottom: 20px; text-align: center;">
+                SYSTEM UPTIME: <span id="v-uptime" class="digital-text" style="color: var(--text-dark); margin-left: 5px;">--:--:--</span>
+            </div>
+            
             <ul class="dash-list">
-                <li>PROCESS FLOW RATE (PV): <span class="dash-val" id="v-flow">—</span> L/min</li>
-                <li>CUMULATIVE VOLUME: <span class="dash-val" id="v-total">—</span> L</li>
-                <li>ACTIVE PROCESS RUNTIME: <span class="dash-val" id="v-uptime">—</span></li>
+                <li><span>KALMAN FILTERED EMF:</span> <span class="dash-val-box" style="color: var(--val-green);" id="v-kalman">— mV</span></li>
+                <li><span>BASELINE OFFSET:</span> <span class="dash-val-box" style="color: var(--text-dark);" id="v-offset">— mV</span></li>
+                <li><span>CUMULATIVE VOLUME:</span> <span class="dash-val-box" style="color: var(--val-blue);" id="v-total-html">— L</span></li>
                 
-                <li>GRAPHS:
-                    <button id="toggle-chart-btn" class="toggle-btn">GRAPH</button>
-                    <div class="chart-container" id="chart-wrapper">
-                        <canvas id="flowChart"></canvas>
+                <li style="flex-direction: column; align-items: flex-start; padding: 20px 0 0 0; border: none; flex: 1;">
+                    <div style="display: flex; justify-content: space-between; width: 100%; margin-bottom: 10px;">
+                        <span>REAL-TIME GRAPH:</span>
+                    </div>
+                    <div class="chart-container" id="chart-wrapper" style="width: 100%; flex: 1; display: flex; flex-direction: column;">
+                        <canvas id="flowChart" style="flex: 1;"></canvas>
                     </div>
                 </li>
-
-                <li>PRE-AMP INDUCED EMF: <span class="dash-val" id="v-raw">—</span> mV</li>
-                <li>QUANTIZED ADC READING: <span class="dash-val" id="v-adc">—</span> counts</li>
-                <li>KALMAN FILTERED EMF: <span class="dash-val" id="v-kalman">—</span> mV</li>
-                <li>VALVE ACTUATOR POSITION: <span class="dash-val" id="v-valve-act">—</span> %</li>
-                <li>OFFSET (BASELINE) NO MAG FIELD: <span class="dash-val" id="v-offset">—</span> mV</li>
             </ul>
-
-            <div class="control-row">
-                <span style="font-size: 12px; font-weight: bold;">ACTUATOR SETPOINT TARGET:</span>
-                <input type="number" id="valve-input" min="0" max="100" placeholder="0"/>
-                <button id="valve-btn">APPLY</button>
-                <span id="valve-status" style="font-size: 11px; margin-left: auto;"></span>
-            </div>
         </div>
     </foreignObject>
 
@@ -296,137 +384,202 @@ const cMain       = $('core-main-loop');
 const cBypassPre  = $('core-bypass-pre');
 const cBypassPost = $('core-bypass-post');
 
-const arrMain     = $('flow-arrows-main');
-const arrBypassPre= $('flow-arrows-bypass-pre');
-const arrBypassPost=$('flow-arrows-bypass-post');
+const coilA_bg    = $('coil-a-bg');
+const coilB_bg    = $('coil-b-bg');
 
-// TOGGLE GRAPH
-const toggleBtn = $('toggle-chart-btn');
-const chartWrapper = $('chart-wrapper');
-toggleBtn.addEventListener('click', () => {
-    if (chartWrapper.style.display === 'none' || chartWrapper.style.display === '') {
-        chartWrapper.style.display = 'block';
-    } else {
-        chartWrapper.style.display = 'none';
-    }
+const ampStatus   = $('amp-status');
+const adcStatus   = $('adc-status');
+
+// ENLARGE GRAPH LOGIC (Simulink Aesthetics Toggle)
+const originalWrapper = $('chart-wrapper');
+const modalWrapper = $('modal-chart-wrapper');
+const overlay = $('chart-overlay');
+const flowChartCanvas = $('flowChart');
+const closeBtn = $('close-modal-btn');
+
+originalWrapper.addEventListener('click', () => {
+    modalWrapper.appendChild(flowChartCanvas);
+    overlay.classList.add('active');
+    
+    // Enable technical axis titles and padding when enlarged
+    chart.options.scales.x.title.display = true;
+    chart.options.scales.y.title.display = true;
+    chart.options.layout.padding = 20;
+    chart.update();
 });
 
-// CHART.JS (RAW VS KALMAN)
-const ctx = $('flowChart').getContext('2d');
+closeBtn.addEventListener('click', () => {
+    originalWrapper.appendChild(flowChartCanvas);
+    overlay.classList.remove('active');
+    
+    // Revert to minimalistic scope view
+    chart.options.scales.x.title.display = false;
+    chart.options.scales.y.title.display = false;
+    chart.options.layout.padding = 0;
+    chart.update();
+});
+
+// CHART.JS SIMULINK THEME
+const ctx = flowChartCanvas.getContext('2d');
 const chart = new Chart(ctx, {
     type: 'line',
     data: {
         labels: [],
         datasets: [
-            { 
-                label: 'Raw EMF (mV)', 
-                data: [], 
-                borderColor: 'rgba(239, 68, 68, 0.6)', 
-                backgroundColor: 'transparent',
-                yAxisID: 'y', 
-                fill: false, 
-                tension: 0.1, 
-                pointRadius: 0, 
-                borderWidth: 1.5 
-            },
-            { 
-                label: 'Kalman (mV)', 
-                data: [], 
-                borderColor: '#22c55e', 
-                backgroundColor: 'transparent',
-                yAxisID: 'y', 
-                fill: false,
-                tension: 0.4, 
-                pointRadius: 0, 
-                borderWidth: 2.5 
-            }
+            { label: 'RAW NOISE', data: [], borderColor: '#0072BD', backgroundColor: '#0072BD', yAxisID: 'y', fill: false, tension: 0, pointRadius: 0, borderWidth: 1.5 },
+            { label: 'KALMAN FILTER', data: [], borderColor: '#D95319', backgroundColor: '#D95319', yAxisID: 'y', fill: false, tension: 0, pointRadius: 0, borderWidth: 2.0 }
         ]
     },
     options: {
         responsive: true, maintainAspectRatio: false, animation: false,
-        plugins: { legend: { labels: { color: '#333', font: { size: 9 }, boxWidth: 12 }, position: 'top' } },
+        layout: { padding: 0 },
+        plugins: { 
+            legend: { 
+                labels: { font: { size: 11, family: "'JetBrains Mono', monospace", weight: 'bold' }, color: '#0f172a', boxWidth: 12 }, 
+                position: 'top' 
+            },
+            tooltip: { enabled: false }
+        },
         scales: {
-            x: { display: false },
-            y: { position: 'left', ticks: { color: '#333', font: { size: 9 } } }
+            x: { 
+                display: true,
+                title: { display: false, text: 'TIME (SAMPLES)', font: { family: "'JetBrains Mono', monospace", weight: 'bold', size: 12 }, color: '#0f172a' },
+                grid: { color: '#e2e8f0', tickLength: 5 },
+                border: { color: '#0f172a', width: 2 },
+                ticks: { font: { family: "'JetBrains Mono', monospace", size: 10 }, color: '#64748b', maxTicksLimit: 10 }
+            },
+            y: { 
+                display: true,
+                title: { display: false, text: 'AMPLITUDE (mV)', font: { family: "'JetBrains Mono', monospace", weight: 'bold', size: 12 }, color: '#0f172a' },
+                position: 'left', 
+                grid: { color: '#e2e8f0' }, 
+                border: { color: '#0f172a', width: 2 },
+                ticks: { font: { family: "'JetBrains Mono', monospace", size: 10 }, color: '#64748b' }
+            }
         }
     }
 });
 
-const fmt = (v, d=2) => (v != null && v !== undefined) ? parseFloat(v).toFixed(d) : '—';
-const fmtTime = s => s ? [Math.floor(s/3600), Math.floor((s%3600)/60), s%60].map(n => String(n).padStart(2,'0')).join(':') : '00:00:00';
+// Strict Formatting: Prevents synthetic zeros if data is entirely missing
+const fmt = (v, d=2) => (v != null && v !== undefined && v !== '') ? parseFloat(v).toFixed(d) : '---';
+const fmtTime = s => (s != null && s !== undefined) ? [Math.floor(s/3600), Math.floor((s%3600)/60), s%60].map(n => String(n).padStart(2,'0')).join(':') : '--:--:--';
 
-window.togglePump = function(motorId) {
-    const path = `telemetry/motors/${motorId}_on`;
-    get(ref(db, path)).then(snap => set(ref(db, path), !snap.val()));
-}
+// TOGGLE HANDLERS (Write to DB)
+$('toggle-ma').addEventListener('change', e => set(ref(db, 'telemetry/motors/a_on'), e.target.checked));
+$('toggle-mb').addEventListener('change', e => set(ref(db, 'telemetry/motors/b_on'), e.target.checked));
+$('toggle-ema').addEventListener('change', e => set(ref(db, 'telemetry/magnets/a_on'), e.target.checked));
+$('toggle-emb').addEventListener('change', e => set(ref(db, 'telemetry/magnets/b_on'), e.target.checked));
 
+let sampleCount = 0;
+
+// TELEMETRY LISTENER
 onValue(ref(db, 'telemetry'), snap => {
     const d = snap.val() || {};
+    
+    // Status Logic for AMP and ADC
+    if (snap.exists() && Object.keys(d).length > 0) {
+        ampStatus.textContent = 'STATUS: ON';
+        ampStatus.style.fill = '#059669'; 
+        adcStatus.textContent = 'STATUS: ON';
+        adcStatus.style.fill = '#059669'; 
+    } else {
+        ampStatus.textContent = 'STATUS: WAIT';
+        ampStatus.style.fill = '#64748b'; 
+        adcStatus.textContent = 'STATUS: WAIT';
+        adcStatus.style.fill = '#64748b'; 
+    }
 
     const ma   = d.motors?.a_on || false;
     const mb   = d.motors?.b_on || false;
+    const ema  = d.magnets?.a_on || false;
+    const emb  = d.magnets?.b_on || false;
     const flow = ma || mb;
-    const vAct = d.valve?.current_pct || 0;
+    const vAct = d.valve?.current_pct;
+
+    $('toggle-ma').checked = ma;
+    $('toggle-mb').checked = mb;
+    $('toggle-ema').checked = ema;
+    $('toggle-emb').checked = emb;
 
     gearA.classList.toggle('spinning', ma);
     gearB.classList.toggle('spinning', mb);
     
-    // Pipe logic
+    coilA_bg.style.fill = ema ? '#d97706' : '#94a3b8';
+    coilB_bg.style.fill = emb ? '#d97706' : '#94a3b8';
+    
     cLegA.classList.toggle('flowing', ma);
     cLegB.classList.toggle('flowing', mb);
     cTrunk.classList.toggle('flowing', flow);
     cMain.classList.toggle('flowing', flow);
-    
-    // Valve logic
     cBypassPre.classList.toggle('flowing', flow);
-    cBypassPost.classList.toggle('flowing', flow && vAct > 0);
-    
-    // Arrows
-    arrMain.classList.toggle('flowing', flow);
-    arrBypassPre.classList.toggle('flowing', flow);
-    arrBypassPost.classList.toggle('flowing', flow && vAct > 0);
+    cBypassPost.classList.toggle('flowing', flow && (vAct > 0));
 
-    // Update Data
-    $('v-raw').textContent      = fmt(d.signals?.raw_emf, 4);
-    $('v-adc').textContent      = d.signals?.adc_emf ?? '—';
-    $('v-kalman').textContent   = fmt(d.signals?.kalman_emf, 4);
-    $('v-offset').textContent   = fmt(d.signals?.offset, 4);
-    $('v-valve-act').textContent= fmt(vAct, 0);
+    // STRICT UI Binding (no fake defaults)
+    $('v-raw').textContent            = fmt(d.signals?.raw_emf, 4);
+    $('v-adc').textContent            = (d.signals?.adc_emf != null) ? d.signals.adc_emf : '---';
+    $('v-kalman').textContent         = fmt(d.signals?.kalman_emf, 4) + ' mV';
+    $('v-offset').textContent         = fmt(d.signals?.offset, 4) + ' mV';
+    $('v-valve-act-html').textContent = (vAct != null) ? fmt(vAct, 0) + ' %' : '--- %';
+    $('v-total-html').textContent     = fmt(d.flow?.total, 1) + ' L';
+    $('v-flow').textContent           = fmt(d.flow?.rate, 2);
+    $('v-uptime').textContent         = fmtTime(d.flow?.uptime);
 
-    const fRate  = d.flow?.rate   || 0;
-    $('v-flow').textContent     = fmt(fRate, 3);
-    $('v-total').textContent    = fmt(d.flow?.total, 1);
-    $('v-uptime').textContent   = fmtTime(d.flow?.uptime || 0);
-
-    // Update Chart
-    chart.data.labels.push('');
-    chart.data.datasets[0].data.push(d.signals?.raw_emf || 0);
-    chart.data.datasets[1].data.push(d.signals?.kalman_emf || 0);
-    if (chart.data.labels.length > 50) {
-        chart.data.labels.shift();
-        chart.data.datasets[0].data.shift();
-        chart.data.datasets[1].data.shift();
+    // Chart Update: ONLY progress if actual numerical signal data exists in this payload
+    if (d.signals && typeof d.signals.raw_emf === 'number') {
+        chart.data.labels.push(sampleCount++);
+        chart.data.datasets[0].data.push(d.signals.raw_emf); 
+        chart.data.datasets[1].data.push(d.signals.kalman_emf || 0);
+        
+        // Rolling window of 100 samples for a detailed scope look
+        if (chart.data.labels.length > 100) {
+            chart.data.labels.shift();
+            chart.data.datasets[0].data.shift();
+            chart.data.datasets[1].data.shift();
+        }
+        chart.update('none'); // Update without animation 
     }
-    chart.update();
 });
 
+// VALVE CONTROL LOGIC
+const btnAdjust  = $('show-adjust-btn');
+const inputCard  = $('valve-input-card');
 const valveInput = $('valve-input');
 const valveBtn   = $('valve-btn');
 const valveStat  = $('valve-status');
 
+btnAdjust.addEventListener('click', () => {
+    if (inputCard.style.display === 'none') {
+        inputCard.style.display = 'flex';
+        btnAdjust.textContent = 'HIDE ADJUSTMENT';
+    } else {
+        inputCard.style.display = 'none';
+        btnAdjust.textContent = 'ADJUST';
+    }
+});
+
 function sendValve() {
     const raw = valveInput.value.trim();
-    if (raw === '') { valveStat.style.color = 'red'; valveStat.textContent = 'Enter 0-100'; return; }
+    if (raw === '') { valveStat.style.color = '#ef4444'; valveStat.textContent = 'ERR'; return; }
     const val = parseInt(raw, 10);
-    if (isNaN(val) || val < 0 || val > 100) { valveStat.style.color = 'red'; valveStat.textContent = 'Invalid %'; return; }
+    if (isNaN(val) || val < 0 || val > 100) { valveStat.style.color = '#ef4444'; valveStat.textContent = 'ERR: 0-100'; return; }
     
-    valveStat.style.color = '#FFD700'; valveStat.textContent = 'Sending...';
+    valveStat.style.color = '#d97706'; valveStat.textContent = 'WAIT...';
     set(ref(db, 'control/valve_setpoint'), val)
-        .then(() => { valveStat.style.color = '#00FF00'; valveStat.textContent = `Set to ${val}%`; valveInput.value = ''; })
-        .catch(e => { valveStat.style.color = 'red'; valveStat.textContent = 'Error'; });
+        .then(() => { 
+            valveStat.style.color = '#059669'; 
+            valveStat.textContent = `SET: ${val}%`; 
+            valveInput.value = ''; 
+            setTimeout(() => { 
+                inputCard.style.display = 'none'; 
+                btnAdjust.textContent = 'ADJUST';
+                valveStat.textContent = '';
+            }, 1500);
+        })
+        .catch(e => { valveStat.style.color = '#ef4444'; valveStat.textContent = 'FAULT'; });
 }
 valveBtn.addEventListener('click', sendValve);
 valveInput.addEventListener('keydown', e => { if (e.key === 'Enter') sendValve(); });
+
 </script>
 </body>
 </html>
