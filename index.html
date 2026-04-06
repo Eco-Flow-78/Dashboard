@@ -58,7 +58,6 @@
         border-radius: 8px;
     }
 
-    /* Chart Modal Overlay */
     .chart-overlay {
         display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; 
         background: rgba(15, 23, 42, 0.8); z-index: 9999; backdrop-filter: blur(4px);
@@ -77,13 +76,43 @@
     }
 
     /* ==========================================
-       3. ANIMATIONS & PIPE STYLES
+       3. FLUID DYNAMICS (CASCADING ANIMATIONS)
     ========================================== */
-    .pipe-core { transition: stroke 0.4s ease; }
-    .flowing { stroke: var(--water-flow) !important; opacity: 1 !important; }
-    
     @keyframes spin { to { transform: rotate(360deg); } }
     .spinning { animation: spin 0.8s linear infinite; transform-origin: center; transform-box: fill-box; }
+
+    /* Base Water Path Setup */
+    .pipe-core { 
+        stroke-dasharray: var(--len);
+        stroke-dashoffset: var(--len);
+        opacity: 1; 
+    }
+
+    /* Precisely mapped pixel travel times to fix junction entry/exit */
+    #core-leg-a, #core-leg-b { --dur: 1.0s; --delay: 0s; }
+    #core-trunk              { --dur: 1.5s; --delay: 1.0s; }
+    #core-main-loop          { --dur: 5.0s; --delay: 2.5s; }
+    
+    /* Water takes ~1.1s to travel from X=370 to junction X=785. Delay = 2.5s + 1.1s = 3.6s */
+    #core-bypass-pre         { --dur: 0.7s; --delay: 3.6s; } 
+    /* Post-valve starts after bypass-pre reaches the valve (3.6s + 0.7s = 4.3s) */
+    #core-bypass-post        { --dur: 1.1s; --delay: 4.3s; } 
+
+    /* The State Classes controlled by JS */
+    .filling { animation: fill-pipe var(--dur) linear var(--delay) both; }
+    .draining { animation: drain-pipe var(--dur) linear var(--delay) both; }
+
+    /* Fills from the source by dropping dashoffset from L to 0 */
+    @keyframes fill-pipe {
+        0%   { stroke-dashoffset: var(--len); }
+        100% { stroke-dashoffset: 0; }
+    }
+    
+    /* Drains forward by dropping dashoffset from 0 to -L (pushes water out the end) */
+    @keyframes drain-pipe {
+        0%   { stroke-dashoffset: 0; }
+        100% { stroke-dashoffset: calc(var(--len) * -1); }
+    }
 
     /* ==========================================
        4. DASHBOARD PANEL
@@ -179,14 +208,22 @@
         <path d="M 785,440 V 600 H 270" stroke="var(--pipe-border)" stroke-width="22" fill="none" stroke-linejoin="round" stroke-linecap="butt"/>
     </g>
 
-    <g id="pipe-interiors">
-        <path id="core-leg-a" d="M 120,760 V 650 H 175" stroke="var(--pipe-white)" stroke-width="18" fill="none" class="pipe-core" stroke-linejoin="round" stroke-linecap="round"/>
-        <path id="core-leg-b" d="M 230,760 V 650 H 175" stroke="var(--pipe-white)" stroke-width="18" fill="none" class="pipe-core" stroke-linejoin="round" stroke-linecap="round"/>
-        <path id="core-trunk" d="M 175,650 V 440 H 370" stroke="var(--pipe-white)" stroke-width="26" fill="none" class="pipe-core" stroke-linejoin="round" stroke-linecap="round"/>
-        
-        <path id="core-main-loop" d="M 370,440 H 1080 V 710 H 270" stroke="var(--pipe-white)" stroke-width="26" fill="none" class="pipe-core" stroke-linejoin="round" stroke-linecap="butt"/>
-        <path id="core-bypass-pre" d="M 785,440 V 600 H 690" stroke="var(--pipe-white)" stroke-width="16" fill="none" class="pipe-core" stroke-linejoin="round" stroke-linecap="round"/>
-        <path id="core-bypass-post" d="M 650,600 H 270" stroke="var(--pipe-white)" stroke-width="16" fill="none" class="pipe-core" stroke-linejoin="round" stroke-linecap="butt"/>
+    <g id="pipe-interiors-base">
+        <path d="M 120,760 V 650 H 175" stroke="var(--pipe-white)" stroke-width="18" fill="none" stroke-linejoin="round" stroke-linecap="round"/>
+        <path d="M 230,760 V 650 H 175" stroke="var(--pipe-white)" stroke-width="18" fill="none" stroke-linejoin="round" stroke-linecap="round"/>
+        <path d="M 175,650 V 440 H 370" stroke="var(--pipe-white)" stroke-width="26" fill="none" stroke-linejoin="round" stroke-linecap="round"/>
+        <path d="M 370,440 H 1080 V 710 H 270" stroke="var(--pipe-white)" stroke-width="26" fill="none" stroke-linejoin="round" stroke-linecap="butt"/>
+        <path d="M 785,440 V 600 H 690" stroke="var(--pipe-white)" stroke-width="16" fill="none" stroke-linejoin="round" stroke-linecap="round"/>
+        <path d="M 650,600 H 270" stroke="var(--pipe-white)" stroke-width="16" fill="none" stroke-linejoin="round" stroke-linecap="butt"/>
+    </g>
+
+    <g id="pipe-interiors-flow">
+        <path id="core-leg-a" d="M 120,760 V 650 H 175" stroke="var(--water-flow)" stroke-width="18" fill="none" class="pipe-core" stroke-linejoin="round" stroke-linecap="round"/>
+        <path id="core-leg-b" d="M 230,760 V 650 H 175" stroke="var(--water-flow)" stroke-width="18" fill="none" class="pipe-core" stroke-linejoin="round" stroke-linecap="round"/>
+        <path id="core-trunk" d="M 175,650 V 440 H 370" stroke="var(--water-flow)" stroke-width="26" fill="none" class="pipe-core" stroke-linejoin="round" stroke-linecap="round"/>
+        <path id="core-main-loop" d="M 370,440 H 1080 V 710 H 270" stroke="var(--water-flow)" stroke-width="26" fill="none" class="pipe-core" stroke-linejoin="round" stroke-linecap="butt"/>
+        <path id="core-bypass-pre" d="M 785,440 V 600 H 690" stroke="var(--water-flow)" stroke-width="16" fill="none" class="pipe-core" stroke-linejoin="round" stroke-linecap="round"/>
+        <path id="core-bypass-post" d="M 650,600 H 270" stroke="var(--water-flow)" stroke-width="16" fill="none" class="pipe-core" stroke-linejoin="round" stroke-linecap="butt"/>
     </g>
 
     <circle cx="175" cy="650" r="20" fill="#94a3b8" stroke="var(--pipe-border)" stroke-width="2"/>
@@ -390,7 +427,32 @@ const coilB_bg    = $('coil-b-bg');
 const ampStatus   = $('amp-status');
 const adcStatus   = $('adc-status');
 
-// ENLARGE GRAPH LOGIC (Simulink Aesthetics Toggle)
+// 1. CALCULATE EXACT PIXEL LENGTH OF PIPES FOR ANIMATION SCALING
+const pipes = [cLegA, cLegB, cTrunk, cMain, cBypassPre, cBypassPost];
+pipes.forEach(p => {
+    if (p && p.getTotalLength) {
+        p.style.setProperty('--len', p.getTotalLength());
+    }
+});
+
+// 2. JS STATE MACHINE TO PREVENT CSS JUMPING ON LOAD
+const pipeStates = new Map();
+function updatePipeFlow(el, shouldFlow) {
+    const currentState = pipeStates.get(el);
+    if (currentState !== shouldFlow) {
+        if (shouldFlow) {
+            el.classList.add('filling');
+            el.classList.remove('draining');
+        } else if (currentState !== undefined) { 
+            // Only drain if it was explicitly flowing before
+            el.classList.add('draining');
+            el.classList.remove('filling');
+        }
+        pipeStates.set(el, shouldFlow);
+    }
+}
+
+// 3. ENLARGE GRAPH LOGIC (Simulink Aesthetics)
 const originalWrapper = $('chart-wrapper');
 const modalWrapper = $('modal-chart-wrapper');
 const overlay = $('chart-overlay');
@@ -400,8 +462,6 @@ const closeBtn = $('close-modal-btn');
 originalWrapper.addEventListener('click', () => {
     modalWrapper.appendChild(flowChartCanvas);
     overlay.classList.add('active');
-    
-    // Enable technical axis titles and padding when enlarged
     chart.options.scales.x.title.display = true;
     chart.options.scales.y.title.display = true;
     chart.options.layout.padding = 20;
@@ -411,15 +471,13 @@ originalWrapper.addEventListener('click', () => {
 closeBtn.addEventListener('click', () => {
     originalWrapper.appendChild(flowChartCanvas);
     overlay.classList.remove('active');
-    
-    // Revert to minimalistic scope view
     chart.options.scales.x.title.display = false;
     chart.options.scales.y.title.display = false;
     chart.options.layout.padding = 0;
     chart.update();
 });
 
-// CHART.JS SIMULINK THEME
+// 4. CHART.JS CONFIGURATION
 const ctx = flowChartCanvas.getContext('2d');
 const chart = new Chart(ctx, {
     type: 'line',
@@ -434,10 +492,7 @@ const chart = new Chart(ctx, {
         responsive: true, maintainAspectRatio: false, animation: false,
         layout: { padding: 0 },
         plugins: { 
-            legend: { 
-                labels: { font: { size: 11, family: "'JetBrains Mono', monospace", weight: 'bold' }, color: '#0f172a', boxWidth: 12 }, 
-                position: 'top' 
-            },
+            legend: { labels: { font: { size: 11, family: "'JetBrains Mono', monospace", weight: 'bold' }, color: '#0f172a', boxWidth: 12 }, position: 'top' },
             tooltip: { enabled: false }
         },
         scales: {
@@ -460,11 +515,9 @@ const chart = new Chart(ctx, {
     }
 });
 
-// Strict Formatting: Prevents synthetic zeros if data is entirely missing
 const fmt = (v, d=2) => (v != null && v !== undefined && v !== '') ? parseFloat(v).toFixed(d) : '---';
 const fmtTime = s => (s != null && s !== undefined) ? [Math.floor(s/3600), Math.floor((s%3600)/60), s%60].map(n => String(n).padStart(2,'0')).join(':') : '--:--:--';
 
-// TOGGLE HANDLERS (Write to DB)
 $('toggle-ma').addEventListener('change', e => set(ref(db, 'telemetry/motors/a_on'), e.target.checked));
 $('toggle-mb').addEventListener('change', e => set(ref(db, 'telemetry/motors/b_on'), e.target.checked));
 $('toggle-ema').addEventListener('change', e => set(ref(db, 'telemetry/magnets/a_on'), e.target.checked));
@@ -472,21 +525,16 @@ $('toggle-emb').addEventListener('change', e => set(ref(db, 'telemetry/magnets/b
 
 let sampleCount = 0;
 
-// TELEMETRY LISTENER
+// 5. TELEMETRY LISTENER
 onValue(ref(db, 'telemetry'), snap => {
     const d = snap.val() || {};
     
-    // Status Logic for AMP and ADC
     if (snap.exists() && Object.keys(d).length > 0) {
-        ampStatus.textContent = 'STATUS: ON';
-        ampStatus.style.fill = '#059669'; 
-        adcStatus.textContent = 'STATUS: ON';
-        adcStatus.style.fill = '#059669'; 
+        ampStatus.textContent = 'STATUS: ON'; ampStatus.style.fill = '#059669'; 
+        adcStatus.textContent = 'STATUS: ON'; adcStatus.style.fill = '#059669'; 
     } else {
-        ampStatus.textContent = 'STATUS: WAIT';
-        ampStatus.style.fill = '#64748b'; 
-        adcStatus.textContent = 'STATUS: WAIT';
-        adcStatus.style.fill = '#64748b'; 
+        ampStatus.textContent = 'STATUS: WAIT'; ampStatus.style.fill = '#64748b'; 
+        adcStatus.textContent = 'STATUS: WAIT'; adcStatus.style.fill = '#64748b'; 
     }
 
     const ma   = d.motors?.a_on || false;
@@ -507,14 +555,14 @@ onValue(ref(db, 'telemetry'), snap => {
     coilA_bg.style.fill = ema ? '#d97706' : '#94a3b8';
     coilB_bg.style.fill = emb ? '#d97706' : '#94a3b8';
     
-    cLegA.classList.toggle('flowing', ma);
-    cLegB.classList.toggle('flowing', mb);
-    cTrunk.classList.toggle('flowing', flow);
-    cMain.classList.toggle('flowing', flow);
-    cBypassPre.classList.toggle('flowing', flow);
-    cBypassPost.classList.toggle('flowing', flow && (vAct > 0));
+    // Dispatch states to the state-machine
+    updatePipeFlow(cLegA, ma);
+    updatePipeFlow(cLegB, mb);
+    updatePipeFlow(cTrunk, flow);
+    updatePipeFlow(cMain, flow);
+    updatePipeFlow(cBypassPre, flow);
+    updatePipeFlow(cBypassPost, flow && (vAct > 0));
 
-    // STRICT UI Binding (no fake defaults)
     $('v-raw').textContent            = fmt(d.signals?.raw_emf, 4);
     $('v-adc').textContent            = (d.signals?.adc_emf != null) ? d.signals.adc_emf : '---';
     $('v-kalman').textContent         = fmt(d.signals?.kalman_emf, 4) + ' mV';
@@ -524,23 +572,22 @@ onValue(ref(db, 'telemetry'), snap => {
     $('v-flow').textContent           = fmt(d.flow?.rate, 2);
     $('v-uptime').textContent         = fmtTime(d.flow?.uptime);
 
-    // Chart Update: ONLY progress if actual numerical signal data exists in this payload
+    // Chart Update (Strict Data Rule)
     if (d.signals && typeof d.signals.raw_emf === 'number') {
         chart.data.labels.push(sampleCount++);
         chart.data.datasets[0].data.push(d.signals.raw_emf); 
         chart.data.datasets[1].data.push(d.signals.kalman_emf || 0);
         
-        // Rolling window of 100 samples for a detailed scope look
         if (chart.data.labels.length > 100) {
             chart.data.labels.shift();
             chart.data.datasets[0].data.shift();
             chart.data.datasets[1].data.shift();
         }
-        chart.update('none'); // Update without animation 
+        chart.update('none'); 
     }
 });
 
-// VALVE CONTROL LOGIC
+// 6. VALVE CONTROL LOGIC
 const btnAdjust  = $('show-adjust-btn');
 const inputCard  = $('valve-input-card');
 const valveInput = $('valve-input');
