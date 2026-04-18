@@ -629,26 +629,35 @@ $('toggle-mb').addEventListener('change', e => set(ref(db, 'telemetry/motors/b_o
 $('toggle-solenoid').addEventListener('change', e => set(ref(db, 'telemetry/valves/solenoid_on'), e.target.checked));
 $('toggle-dcpump').addEventListener('change', e => set(ref(db, 'telemetry/motors/dc_pump_on'), e.target.checked));
 
-// Master Coils Toggle updates both a_on and b_on
+// Master Coils Toggle
 $('toggle-coils').addEventListener('change', e => {
     const checked = e.target.checked;
     set(ref(db, 'telemetry/magnets/a_on'), checked);
     set(ref(db, 'telemetry/magnets/b_on'), checked);
 });
 
-// Firebase Connection Status (.info/connected)
+// Real-Time Watchdog Connection Status
 const statusBadge = $('connection-status');
 const statusText = $('status-text');
 
-onValue(ref(db, '.info/connected'), (snap) => {
-    if (snap.val() === true) {
+let lastDataTime = 0;
+const CONNECTION_TIMEOUT = 5000; // 5 seconds without data = disconnected
+
+function updateConnectionStatus(isConnected) {
+    if (isConnected) {
         statusBadge.classList.add('connected');
         statusText.textContent = 'SYSTEM CONNECTED';
     } else {
         statusBadge.classList.remove('connected');
         statusText.textContent = 'DISCONNECTED';
     }
-});
+}
+
+setInterval(() => {
+    if (Date.now() - lastDataTime > CONNECTION_TIMEOUT) {
+        updateConnectionStatus(false);
+    }
+}, 1000);
 
 
 let sampleCount = 0;
@@ -659,6 +668,10 @@ let tempAlertActive = false;
 // TELEMETRY LISTENER
 onValue(ref(db, 'telemetry'), snap => {
     const d = snap.val() || {};
+    
+    // Watchdog Trigger
+    lastDataTime = Date.now();
+    updateConnectionStatus(true);
     
     if (snap.exists() && Object.keys(d).length > 0) {
         ampStatus.textContent = 'STATUS: ON'; ampStatus.style.fill = '#059669'; 
@@ -762,7 +775,7 @@ onValue(ref(db, 'telemetry'), snap => {
     $('v-flow').textContent           = fmt(d.flow?.rate, 2);
     $('v-uptime').textContent         = fmtTime(d.flow?.uptime);
     
-    // Coil Stats with potential Alert HTML injected
+    // Coil Stats
     $('v-coil-current').innerHTML     = (d.magnets?.current_a != null) ? fmt(current_a, 2) + ' A' + curAlertHtml : '--- A';
     $('v-coil-temp').innerHTML        = (d.magnets?.temp_c != null) ? fmt(temp_c, 1) + ' °C' + tempAlertHtml : '--- °C';
 
