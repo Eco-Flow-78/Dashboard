@@ -58,6 +58,41 @@
         border-radius: 8px;
     }
 
+    /* Connection Status Badge */
+    .connection-badge {
+        position: absolute;
+        top: 24px;
+        left: 24px;
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        padding: 8px 16px;
+        border-radius: 20px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-size: 12px;
+        font-weight: 800;
+        color: var(--text-muted);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+        z-index: 100;
+        transition: all 0.3s ease;
+    }
+    .status-dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background: #ef4444; /* Disconnected Red */
+        box-shadow: 0 0 6px rgba(239, 68, 68, 0.6);
+        transition: all 0.3s ease;
+    }
+    .connection-badge.connected .status-dot {
+        background: #10b981; /* Connected Green */
+        box-shadow: 0 0 8px rgba(16, 185, 129, 0.8);
+    }
+    .connection-badge.connected #status-text {
+        color: #0f172a;
+    }
+
     .chart-overlay {
         display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; 
         background: rgba(15, 23, 42, 0.8); z-index: 9999; backdrop-filter: blur(4px);
@@ -175,6 +210,11 @@
 </style>
 </head>
 <body>
+
+<div id="connection-status" class="connection-badge">
+    <span class="status-dot"></span>
+    <span id="status-text">DISCONNECTED</span>
+</div>
 
 <div class="chart-overlay" id="chart-overlay">
     <div class="enlarged-chart-container" id="modal-chart-wrapper">
@@ -595,6 +635,21 @@ $('toggle-coils').addEventListener('change', e => {
     set(ref(db, 'telemetry/magnets/a_on'), checked);
     set(ref(db, 'telemetry/magnets/b_on'), checked);
 });
+
+// Firebase Connection Status (.info/connected)
+const statusBadge = $('connection-status');
+const statusText = $('status-text');
+
+onValue(ref(db, '.info/connected'), (snap) => {
+    if (snap.val() === true) {
+        statusBadge.classList.add('connected');
+        statusText.textContent = 'SYSTEM CONNECTED';
+    } else {
+        statusBadge.classList.remove('connected');
+        statusText.textContent = 'DISCONNECTED';
+    }
+});
+
 
 let sampleCount = 0;
 let waterAlertActive = false;
