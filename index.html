@@ -629,11 +629,13 @@ $('toggle-mb').addEventListener('change', e => set(ref(db, 'telemetry/motors/b_o
 $('toggle-solenoid').addEventListener('change', e => set(ref(db, 'telemetry/valves/solenoid_on'), e.target.checked));
 $('toggle-dcpump').addEventListener('change', e => set(ref(db, 'telemetry/motors/dc_pump_on'), e.target.checked));
 
-// Master Coils Toggle
+// ==========================================
+// MASTER COILS TOGGLE - UPDATED
+// Now reads and writes strictly to /telemetry/magnets/a_on
+// ==========================================
 $('toggle-coils').addEventListener('change', e => {
     const checked = e.target.checked;
-    set(ref(db, 'telemetry/magnets/a_on'), checked);
-    set(ref(db, 'telemetry/magnets/b_on'), checked);
+    set(ref(db, 'telemetry/magnets/a_on'), checked); 
 });
 
 // Real-Time Watchdog Connection Status
@@ -684,11 +686,13 @@ onValue(ref(db, 'telemetry'), snap => {
     const ma       = d.motors?.a_on || false;
     const mb       = d.motors?.b_on || false;
     const dcPump   = d.motors?.dc_pump_on || false;
+    
+    // ==========================================
+    // ELECTROMAGNET STATE SYNC - UPDATED
+    // ==========================================
     const ema      = d.magnets?.a_on || false;
-    const emb      = d.magnets?.b_on || false;
     const solenoid = d.valves?.solenoid_on || false;
     const flow     = ma || mb;
-    const coilsOn  = ema || emb; 
 
     const maSpd    = d.motors?.a_speed ?? 100;
     const mbSpd    = d.motors?.b_speed ?? 100;
@@ -696,7 +700,10 @@ onValue(ref(db, 'telemetry'), snap => {
     // Toggles
     $('toggle-ma').checked = ma;
     $('toggle-mb').checked = mb;
-    $('toggle-coils').checked = coilsOn;
+    
+    // Sync the HMI switch to match the database/hardware state
+    $('toggle-coils').checked = ema;
+    
     $('toggle-solenoid').checked = solenoid;
     $('toggle-dcpump').checked = dcPump;
     
@@ -713,9 +720,9 @@ onValue(ref(db, 'telemetry'), snap => {
     gearB.classList.toggle('spinning', mb);
     gearDC.classList.toggle('spinning', dcPump);
     
-    // Coils
-    coilA_bg.style.fill = coilsOn ? '#d97706' : '#94a3b8';
-    coilB_bg.style.fill = coilsOn ? '#d97706' : '#94a3b8';
+    // Coils Visual Sync
+    coilA_bg.style.fill = ema ? '#d97706' : '#94a3b8';
+    coilB_bg.style.fill = ema ? '#d97706' : '#94a3b8';
     
     // Water Pipes
     updatePipeFlow(cLegA, ma);
