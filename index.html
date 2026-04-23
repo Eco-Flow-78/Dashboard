@@ -638,12 +638,14 @@ $('toggle-coils').addEventListener('change', e => {
     set(ref(db, 'telemetry/magnets/a_on'), checked); 
 });
 
-// Real-Time Watchdog Connection Status
+// --- REAL-TIME WATCHDOG (HARDWARE HEARTBEAT) ---
 const statusBadge = $('connection-status');
 const statusText = $('status-text');
 
 let lastDataTime = 0;
-const CONNECTION_TIMEOUT = 5000; // 5 seconds without data = disconnected
+let lastRawEmf = null;  // NEW: Memory for hardware values
+let lastUptime = null;  // NEW: Memory for hardware values
+const CONNECTION_TIMEOUT = 5000; // 5 seconds without HARDWARE updates = disconnected
 
 function updateConnectionStatus(isConnected) {
     if (isConnected) {
@@ -671,9 +673,18 @@ let tempAlertActive = false;
 onValue(ref(db, 'telemetry'), snap => {
     const d = snap.val() || {};
     
-    // Watchdog Trigger
-    lastDataTime = Date.now();
-    updateConnectionStatus(true);
+    // === 1. THE HARDWARE HEARTBEAT UPGRADE ===
+    const currentRaw = d.signals?.raw_emf;
+    const currentUptime = d.flow?.uptime;
+    
+    // Only update the connection watchdog if the ESP32 is actively pushing NEW telemetry
+    if (currentRaw !== lastRawEmf || currentUptime !== lastUptime) {
+        lastDataTime = Date.now();
+        lastRawEmf = currentRaw;
+        lastUptime = currentUptime;
+        updateConnectionStatus(true);
+    }
+    // ==========================================
     
     if (snap.exists() && Object.keys(d).length > 0) {
         ampStatus.textContent = 'STATUS: ON'; ampStatus.style.fill = '#059669'; 
