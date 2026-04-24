@@ -8,8 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="preconnect" href="https://www.gstatic.com">
-
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=JetBrains+Mono:wght@400;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700;900&family=Roboto+Mono:wght@400;500;700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js" defer></script>
 
 <style>
@@ -31,12 +30,13 @@
         --val-blue: #0284c7;
         --val-green: #059669;
         --val-amber: #d97706;
+        --val-red: #ef4444;
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; }
     
     body {
-        font-family: 'Inter', sans-serif;
+        font-family: 'Roboto', sans-serif;
         background: var(--bg-color);
         height: 100vh;
         width: 100vw;
@@ -62,28 +62,26 @@
         border-radius: 8px;
     }
 
-    /* Connection Status Badge */
+    /* Connection Status Badge (Acts as Panel Title) */
     .connection-badge {
-        position: absolute;
-        top: 24px;
-        left: 24px;
         background: #ffffff;
         border: 1px solid #e2e8f0;
-        padding: 8px 16px;
-        border-radius: 20px;
-        display: flex;
+        padding: 12px 28px;
+        border-radius: 30px;
+        display: inline-flex;
         align-items: center;
-        gap: 10px;
-        font-size: 12px;
-        font-weight: 800;
+        justify-content: center;
+        gap: 14px;
+        font-size: 18px;
+        font-weight: 900;
+        letter-spacing: 0.5px;
         color: var(--text-muted);
         box-shadow: 0 4px 12px rgba(0,0,0,0.05);
-        z-index: 100;
         transition: all 0.3s ease;
     }
     .status-dot {
-        width: 10px;
-        height: 10px;
+        width: 14px;
+        height: 14px;
         border-radius: 50%;
         background: #ef4444; 
         box-shadow: 0 0 6px rgba(239, 68, 68, 0.6);
@@ -103,28 +101,68 @@
         align-items: center; justify-content: center;
     }
     .chart-overlay.active { display: flex; }
-    .enlarged-chart-container {
-        width: 85vw; height: 80vh; background: #ffffff; padding: 10px; 
+    
+    /* Dedicated Custom Modal Container */
+    .em-modal-content {
+        width: 90vw; height: 85vh; background: #ffffff;
         border-radius: 8px; box-shadow: 0 10px 40px rgba(0,0,0,0.3); position: relative;
-        display: flex; flex-direction: column;
+        display: flex; flex-direction: row; overflow: hidden;
     }
-    #close-modal-btn {
-        position: absolute; top: -15px; right: -15px; background: #ef4444; color: white;
-        border: none; border-radius: 50%; width: 40px; height: 40px; font-weight: bold; 
-        cursor: pointer; box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
+    
+    .alerts-modal-container {
+        width: 60vw; height: 75vh; background: #ffffff;
+        border-radius: 8px; box-shadow: 0 10px 40px rgba(0,0,0,0.3); position: relative;
+        display: flex; flex-direction: column; overflow: hidden;
     }
 
+    .close-btn {
+        position: absolute; top: -15px; right: -15px; background: #ef4444; color: white;
+        border: none; border-radius: 50%; width: 45px; height: 45px; font-weight: bold; font-size: 18px;
+        cursor: pointer; box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4); z-index: 100;
+    }
+
+    /* Modal & Panel Stat Cards */
+    .em-stat-card {
+        background: #ffffff; border: 1px solid #e2e8f0;
+        padding: 8px 12px; 
+        border-radius: 6px; 
+        box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+        width: 100%; box-sizing: border-box;
+        display: flex; flex-direction: column; justify-content: center;
+    }
+    .em-stat-title {
+        font-size: 11px; 
+        font-weight: 700; color: var(--text-muted);
+        margin-bottom: 4px; text-transform: uppercase;
+        line-height: 1.2;
+    }
+    .em-stat-val {
+        font-family: 'Roboto Mono', monospace; font-size: 18px; font-weight: 700;
+    }
+
+    /* Interactive Elements */
+    #electro-magnet, #flow-rate-btn {
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+    #electro-magnet:hover {
+        filter: drop-shadow(0 0 10px rgba(217, 119, 6, 0.6));
+    }
+    #flow-rate-btn:hover rect {
+        stroke: var(--val-blue);
+        filter: drop-shadow(0 0 8px rgba(2, 132, 199, 0.3));
+    }
+    
+    .clickable-panel { cursor: pointer; transition: all 0.2s; }
+    .clickable-panel:hover { border-color: #ef4444; box-shadow: 0 4px 16px rgba(239, 68, 68, 0.15); }
+
     /* ==========================================
-       3. FLUID DYNAMICS (FORWARD DRAINING ENGINE)
+       3. FLUID DYNAMICS
     ========================================== */
     @keyframes spin { to { transform: rotate(360deg); } }
     .spinning { animation: spin 0.8s linear infinite; transform-origin: center; transform-box: fill-box; }
 
-    /* Values dynamically applied via JS to avoid Safari CSS variable bugs */
-    .pipe-core { 
-        opacity: 1; 
-    }
-
+    .pipe-core { opacity: 1; }
     #core-leg-a, #core-leg-b { --dur: 1.0s; --delay: 0s; }
     #core-trunk              { --dur: 1.2s; --delay: 1.0s; }
     #core-main-loop          { --dur: 5.5s; --delay: 2.2s; }
@@ -163,29 +201,18 @@
         border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.05);
     }
     .dash-title { 
-        text-align: center; font-size: 16px; font-weight: 800; 
+        text-align: center; font-size: 18px; font-weight: 900; 
         margin-bottom: 12px; text-transform: uppercase; 
         color: var(--text-dark); border-bottom: 2px solid #f1f5f9; padding-bottom: 12px;
     }
     
-    .dash-list { list-style-type: none; font-size: 12px; font-weight: 800; line-height: 2.2; }
+    .dash-list { list-style-type: none; font-size: 14px; font-weight: 700; line-height: 2.2; }
     .dash-list li { border-bottom: 1px solid #f8fafc; padding: 6px 0; display: flex; justify-content: space-between; align-items: center; color: #334155; }
     
     .dash-val-box { 
-        font-family: 'JetBrains Mono', monospace; font-size: 13px; font-weight: 800; 
+        font-family: 'Roboto Mono', monospace; font-size: 15px; font-weight: 700; 
         background: #ffffff; border: 1px solid #e2e8f0;
-        padding: 4px 10px; border-radius: 4px; min-width: 100px; text-align: right;
-    }
-
-    .chart-container { 
-        background: #ffffff; padding: 10px; border: 1px solid #e2e8f0; border-radius: 6px; 
-        height: 150px; margin-top: 10px; display: block; 
-        cursor: pointer; position: relative; transition: border-color 0.2s;
-    }
-    .chart-container:hover { border-color: #3b82f6; }
-    .chart-container::after {
-        content: "🔍 ENLARGE"; position: absolute; top: 10px; right: 10px; 
-        font-size: 9px; font-weight: bold; color: var(--text-muted); pointer-events: none;
+        padding: 4px 10px; border-radius: 4px; min-width: 110px; text-align: right;
     }
 
     /* ==========================================
@@ -201,27 +228,120 @@
     .slider:before { position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; box-shadow: 0 1px 3px rgba(0,0,0,0.2); }
     input:checked + .slider { background-color: #10b981; }
     input:checked + .slider:before { transform: translateX(20px); }
-    .switch-label { font-size: 10px; font-weight: bold; color: var(--text-muted); margin-bottom: 2px; text-align: center; }
+    .switch-label { font-size: 12px; font-weight: 700; color: var(--text-muted); margin-bottom: 2px; text-align: center; }
 
-    .digital-text { font-family: 'JetBrains Mono', monospace; font-weight: bold; }
+    .digital-text { font-family: 'Roboto Mono', monospace; font-weight: 700; }
     
     .speed-badge {
-        font-family: 'JetBrains Mono', monospace;
+        font-family: 'Roboto Mono', monospace;
         background: #e0f2fe; color: #0284c7; padding: 2px 6px;
-        border-radius: 4px; font-size: 11px; border: 1px solid #bae6fd;
+        border-radius: 4px; font-size: 13px; border: 1px solid #bae6fd;
     }
+    
+    /* Table Styles for Alerts Modal */
+    .alert-table { width: 100%; border-collapse: collapse; text-align: left; font-size: 14px; font-weight: 600; color: #334155; }
+    .alert-table th { padding: 12px; border-bottom: 2px solid #e2e8f0; color: var(--text-muted); position: sticky; top: 0; background: #f8fafc; font-size: 15px;}
+    .alert-table td { padding: 12px; border-bottom: 1px solid #e2e8f0; }
 </style>
 </head>
 <body>
 
-<div id="connection-status" class="connection-badge">
-    <span class="status-dot"></span>
-    <span id="status-text">DISCONNECTED</span>
+<div class="chart-overlay" id="em-modal-overlay">
+    <div class="em-modal-content">
+        <button class="close-btn" id="close-em-modal-btn">X</button>
+        
+        <div style="flex: 1; padding: 15px 15px 15px 20px; display: flex; flex-direction: column;">
+            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #f1f5f9; padding-bottom: 8px; margin-bottom: 10px;">
+                <h2 style="font-family: 'Roboto'; color: var(--text-dark); font-size: 20px; font-weight: 900; text-transform: uppercase;">Coil Diagnostics & Thermal Profile</h2>
+            </div>
+            <div style="position: relative; flex: 1;">
+                <canvas id="emChartCanvas"></canvas>
+            </div>
+        </div>
+
+        <div style="width: 340px; flex-shrink: 0; background: #f8fafc; padding: 15px; border-left: 1px solid #e2e8f0; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; align-content: center; overflow: hidden;">
+            <div class="em-stat-card">
+                <div class="em-stat-title">Instantaneous<br>Current</div>
+                <div class="em-stat-val" id="em-inst-cur" style="color: var(--val-amber);">-- A</div>
+            </div>
+            <div class="em-stat-card">
+                <div class="em-stat-title">Instantaneous<br>Temperature</div>
+                <div class="em-stat-val" id="em-inst-temp" style="color: var(--val-red);">-- °C</div>
+            </div>
+            <div class="em-stat-card">
+                <div class="em-stat-title">Peak<br>Current</div>
+                <div class="em-stat-val" id="em-peak-cur" style="color: var(--val-amber);">-- A</div>
+            </div>
+            <div class="em-stat-card">
+                <div class="em-stat-title">Peak<br>Temperature</div>
+                <div class="em-stat-val" id="em-peak-temp" style="color: var(--val-red);">-- °C</div>
+            </div>
+            <div class="em-stat-card">
+                <div class="em-stat-title">Average<br>Current</div>
+                <div class="em-stat-val" id="em-avg-cur" style="color: var(--text-dark);">-- A</div>
+            </div>
+            <div class="em-stat-card">
+                <div class="em-stat-title">Average<br>Temperature</div>
+                <div class="em-stat-val" id="em-avg-temp" style="color: var(--text-dark);">-- °C</div>
+            </div>
+        </div>
+    </div>
 </div>
 
-<div class="chart-overlay" id="chart-overlay">
-    <div class="enlarged-chart-container" id="modal-chart-wrapper">
-        <button id="close-modal-btn">X</button>
+<div class="chart-overlay" id="flow-modal-overlay">
+    <div class="em-modal-content">
+        <button class="close-btn" id="close-flow-modal-btn">X</button>
+        
+        <div style="flex: 1; padding: 15px 15px 15px 20px; display: flex; flex-direction: column;">
+            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #f1f5f9; padding-bottom: 8px; margin-bottom: 10px;">
+                <h2 style="font-family: 'Roboto'; color: var(--text-dark); font-size: 20px; font-weight: 900; text-transform: uppercase;">Flow Rate Analytics</h2>
+            </div>
+            <div style="position: relative; flex: 1;">
+                <canvas id="processFlowCanvas"></canvas>
+            </div>
+        </div>
+
+        <div style="width: 210px; flex-shrink: 0; background: #f8fafc; padding: 15px; border-left: 1px solid #e2e8f0; display: flex; flex-direction: column; justify-content: center; gap: 8px; overflow: hidden;">
+            <div class="em-stat-card">
+                <div class="em-stat-title">Raw EMF Value</div>
+                <div class="em-stat-val" id="flow-inst-raw" style="color: var(--val-amber);">-- mV</div>
+            </div>
+            <div class="em-stat-card">
+                <div class="em-stat-title">Volumetric Flow</div>
+                <div class="em-stat-val" id="flow-total-vol" style="color: var(--val-green);">-- L</div>
+            </div>
+            <div class="em-stat-card">
+                <div class="em-stat-title">Instantaneous Flow Rate</div>
+                <div class="em-stat-val" id="flow-inst-rate" style="color: var(--val-blue);">-- L/min</div>
+            </div>
+            <div class="em-stat-card">
+                <div class="em-stat-title">Average Flow Rate</div>
+                <div class="em-stat-val" id="flow-avg-rate" style="color: var(--text-dark);">-- L/min</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="chart-overlay" id="alerts-modal-overlay">
+    <div class="alerts-modal-container">
+        <button class="close-btn" id="close-alerts-modal-btn">X</button>
+        <div style="padding: 15px 20px; border-bottom: 2px solid #f1f5f9;">
+            <h2 style="font-family: 'Roboto'; color: var(--text-dark); font-size: 20px; font-weight: 900; text-transform: uppercase;">System Alerts History</h2>
+        </div>
+        <div style="flex: 1; overflow-y: auto; background: #f8fafc;">
+            <table class="alert-table">
+                <thead>
+                    <tr>
+                        <th style="width: 25%;">DATE</th>
+                        <th style="width: 25%;">TIME</th>
+                        <th style="width: 50%;">ALERT TYPE</th>
+                    </tr>
+                </thead>
+                <tbody id="alerts-table-body">
+                    <tr><td colspan="3" style="text-align: center; padding: 25px;">No alerts logged yet.</td></tr>
+                </tbody>
+            </table>
+        </div>
     </div>
 </div>
 
@@ -242,10 +362,10 @@
     </defs>
 
     <g transform="translate(-100, 500)">
-        <rect x="0" y="0" width="130" height="46" fill="rgba(255,255,255,0.9)" stroke="var(--lcd-border)" stroke-width="2" rx="4"/>
-        <text x="65" y="16" font-family="Inter" font-size="10" font-weight="800" fill="var(--text-muted)" text-anchor="middle">WATER LEVEL</text>
-        <text id="v-tank-level" x="65" y="36" class="digital-text" font-size="18" fill="var(--val-blue)" text-anchor="middle">--- %</text>
-        <text id="tank-alert-text" x="65" y="65" font-family="Inter" font-size="12" font-weight="800" fill="#ef4444" text-anchor="middle" class="alert-hidden">⚠️ LOW LEVEL</text>
+        <rect x="0" y="0" width="140" height="50" fill="rgba(255,255,255,0.9)" stroke="var(--lcd-border)" stroke-width="2" rx="4"/>
+        <text x="70" y="18" font-family="Roboto" font-size="12" font-weight="900" fill="var(--text-muted)" text-anchor="middle">WATER LEVEL</text>
+        <text id="v-tank-level" x="70" y="40" class="digital-text" font-size="20" fill="var(--val-blue)" text-anchor="middle">--- %</text>
+        <text id="tank-alert-text" x="70" y="68" font-family="Roboto" font-size="14" font-weight="900" fill="#ef4444" text-anchor="middle" class="alert-hidden">⚠️ LOW LEVEL</text>
     </g>
 
     <rect x="50" y="330" width="250" height="540" fill="url(#tank-metal)" stroke="var(--pipe-border)" stroke-width="3" rx="10"/>
@@ -286,7 +406,7 @@
         <circle cx="0" cy="0" r="28" fill="#f8fafc" stroke="var(--pipe-border)" stroke-width="1"/>
         <path id="gear-a" d="M -16,-16 L 16,16 M -16,16 L 16,-16" stroke="#3b82f6" stroke-width="5" stroke-linecap="round"/>
     </g>
-    <text x="120" y="815" font-family="Inter" font-size="11" font-weight="800" fill="var(--text-dark)" text-anchor="middle">MOTOR A</text>
+    <text x="120" y="815" font-family="Roboto" font-size="13" font-weight="900" fill="var(--text-dark)" text-anchor="middle">MOTOR A</text>
     
     <foreignObject x="90" y="825" width="60" height="50">
         <div xmlns="http://www.w3.org/1999/xhtml" style="width: 100%; height: 100%; display:flex; flex-direction:column; align-items:center;">
@@ -300,7 +420,7 @@
         <circle cx="0" cy="0" r="28" fill="#f8fafc" stroke="var(--pipe-border)" stroke-width="1"/>
         <path id="gear-b" d="M -16,-16 L 16,16 M -16,16 L 16,-16" stroke="#3b82f6" stroke-width="5" stroke-linecap="round"/>
     </g>
-    <text x="230" y="815" font-family="Inter" font-size="11" font-weight="800" fill="var(--text-dark)" text-anchor="middle">MOTOR B</text>
+    <text x="230" y="815" font-family="Roboto" font-size="13" font-weight="900" fill="var(--text-dark)" text-anchor="middle">MOTOR B</text>
 
     <foreignObject x="200" y="825" width="60" height="50">
         <div xmlns="http://www.w3.org/1999/xhtml" style="width: 100%; height: 100%; display:flex; flex-direction:column; align-items:center;">
@@ -309,12 +429,12 @@
         </div>
     </foreignObject>
 
-    <foreignObject x="320" y="730" width="160" height="130">
+    <foreignObject x="320" y="720" width="160" height="160">
         <div xmlns="http://www.w3.org/1999/xhtml" class="in-situ-control" style="width: 100%; height: 100%; gap: 12px; padding: 12px; box-sizing: border-box;">
-            <span style="font-size: 10px; font-weight: bold; color: var(--text-muted); border-bottom: 1px solid #e2e8f0; width: 100%; text-align: center; padding-bottom: 4px;">PUMP SPEEDS</span>
+            <span style="font-size: 12px; font-weight: bold; color: var(--text-muted); border-bottom: 1px solid #e2e8f0; width: 100%; text-align: center; padding-bottom: 4px;">PUMP SPEEDS</span>
             
             <div style="width: 100%; display: flex; flex-direction: column; gap: 4px;">
-                <div style="display: flex; justify-content: space-between; font-size: 10px; font-weight: bold; color: var(--text-dark); align-items: center;">
+                <div style="display: flex; justify-content: space-between; font-size: 12px; font-weight: bold; color: var(--text-dark); align-items: center;">
                     <span>MOTOR A</span>
                     <span id="val-ma-spd" class="speed-badge">100%</span>
                 </div>
@@ -323,7 +443,7 @@
             </div>
 
             <div style="width: 100%; display: flex; flex-direction: column; gap: 4px;">
-                <div style="display: flex; justify-content: space-between; font-size: 10px; font-weight: bold; color: var(--text-dark); align-items: center;">
+                <div style="display: flex; justify-content: space-between; font-size: 12px; font-weight: bold; color: var(--text-dark); align-items: center;">
                     <span>MOTOR B</span>
                     <span id="val-mb-spd" class="speed-badge">100%</span>
                 </div>
@@ -339,14 +459,14 @@
     <ellipse cx="175" cy="330" rx="125" ry="25" fill="#94a3b8" stroke="var(--pipe-border)" stroke-width="3"/>
     <ellipse cx="175" cy="325" rx="90" ry="15" fill="#e2e8f0" stroke="#64748b" stroke-width="2"/>
     
-    <text x="175" y="385" font-family="Inter" font-size="22" font-weight="800" fill="var(--text-dark)" text-anchor="middle" letter-spacing="1">WATER</text>
-    <text x="175" y="415" font-family="Inter" font-size="22" font-weight="800" fill="var(--text-dark)" text-anchor="middle" letter-spacing="1">RESERVOIR</text>
+    <text x="175" y="385" font-family="Roboto" font-size="24" font-weight="900" fill="var(--text-dark)" text-anchor="middle" letter-spacing="1">WATER</text>
+    <text x="175" y="415" font-family="Roboto" font-size="24" font-weight="900" fill="var(--text-dark)" text-anchor="middle" letter-spacing="1">RESERVOIR</text>
 
     <g transform="translate(450, 580)">
         <circle cx="20" cy="20" r="25" fill="#e2e8f0" stroke="var(--pipe-border)" stroke-width="2"/>
         <circle cx="20" cy="20" r="18" fill="#f8fafc" stroke="var(--pipe-border)" stroke-width="1"/>
         <path id="gear-dc" d="M 4,4 L 36,36 M 4,36 L 36,4" stroke="#3b82f6" stroke-width="5" stroke-linecap="round"/>
-        <text x="20" y="65" font-family="Inter" font-size="10" font-weight="800" fill="var(--text-dark)" text-anchor="middle">12V DC PUMP</text>
+        <text x="20" y="65" font-family="Roboto" font-size="12" font-weight="900" fill="var(--text-dark)" text-anchor="middle">12V DC PUMP</text>
     </g>
 
     <foreignObject x="410" y="500" width="120" height="50">
@@ -357,11 +477,11 @@
     </foreignObject>
 
     <g transform="translate(650, 585)">
-        <rect x="0" y="0" width="40" height="30" fill="#ef4444" stroke="var(--pipe-border)" stroke-width="2" rx="2"/>
-        <text x="20" y="19" font-family="Inter" font-size="10" font-weight="800" fill="white" text-anchor="middle">VALVE</text>
-        <rect x="15" y="-10" width="10" height="10" fill="var(--pipe-border)"/>
-        <rect x="-10" y="-30" width="60" height="20" fill="#f8fafc" stroke="var(--pipe-border)" stroke-width="2" rx="4"/>
-        <text x="20" y="-16" font-family="Inter" font-size="9" font-weight="800" fill="var(--text-dark)" text-anchor="middle">SOLENOID</text>
+        <rect x="-10" y="-5" width="60" height="35" fill="#ef4444" stroke="var(--pipe-border)" stroke-width="2" rx="2"/>
+        <text x="20" y="17" font-family="Roboto" font-size="12" font-weight="900" fill="white" text-anchor="middle">VALVE</text>
+        <rect x="15" y="-15" width="10" height="10" fill="var(--pipe-border)"/>
+        <rect x="-20" y="-40" width="80" height="25" fill="#f8fafc" stroke="var(--pipe-border)" stroke-width="2" rx="4"/>
+        <text x="20" y="-23" font-family="Roboto" font-size="11" font-weight="900" fill="var(--text-dark)" text-anchor="middle">SOLENOID</text>
     </g>
 
     <foreignObject x="630" y="500" width="80" height="50">
@@ -374,6 +494,7 @@
     <path d="M 750,420 H 820 V 460 H 800 V 490 H 770 V 460 H 750 Z" fill="#94a3b8" stroke="var(--pipe-border)" stroke-width="2" stroke-linejoin="round"/>
 
     <g id="electro-magnet">
+        <title>Click to view Electromagnet Telemetry</title>
         <path d="M 850,345 H 950 V 365 H 914 V 425 H 886 V 365 H 850 Z" fill="#cbd5e1" stroke="var(--pipe-border)" stroke-width="2" stroke-linejoin="round"/>
         <path d="M 850,535 H 950 V 515 H 914 V 455 H 886 V 515 H 850 Z" fill="#cbd5e1" stroke="var(--pipe-border)" stroke-width="2" stroke-linejoin="round"/>
 
@@ -401,80 +522,100 @@
         </div>
     </foreignObject>
 
+    <g transform="translate(380, 120)">
+        <rect width="160" height="50" fill="var(--lcd-bg)" rx="4" stroke="var(--lcd-border)" stroke-width="2"/>
+        <text x="80" y="18" font-family="Roboto" font-size="12" font-weight="900" fill="var(--text-muted)" text-anchor="middle">PRE-AMP INDUCED EMF</text>
+        <text id="v-raw" x="80" y="40" class="digital-text" font-size="18" fill="var(--val-amber)" text-anchor="middle">--- mV</text>
+    </g>
+
     <g id="signal-blocks">
-        <path d="M 900,440 Q 800,480 650,180" fill="none" stroke="var(--pipe-border)" stroke-width="3"/>
+        <path d="M 900,440 Q 750,480 620,180" fill="none" stroke="var(--pipe-border)" stroke-width="3"/>
         
-        <rect x="600" y="110" width="120" height="75" fill="#ffffff" stroke="var(--lcd-border)" stroke-width="2" rx="4"/>
-        <text x="660" y="125" id="amp-status" font-family="JetBrains Mono" font-size="9" font-weight="bold" fill="var(--text-muted)" text-anchor="middle">STATUS: WAIT</text>
-        <text x="660" y="142" font-family="Inter" font-size="9" font-weight="800" fill="var(--text-muted)" text-anchor="middle">INSTRUMENTATION</text>
-        <text x="660" y="157" font-family="Inter" font-size="9" font-weight="800" fill="var(--text-muted)" text-anchor="middle">AMPLIFIER</text>
-        <text x="660" y="175" font-family="Inter" font-size="12" font-weight="800" fill="var(--text-dark)" text-anchor="middle">AD620</text>
-        <path d="M 720,145 L 740,145 L 740,140 L 755,150 L 740,160 L 740,155 L 720,155 Z" fill="#3b82f6" stroke="var(--pipe-border)" stroke-width="1"/>
+        <rect x="560" y="110" width="130" height="85" fill="#ffffff" stroke="var(--lcd-border)" stroke-width="2" rx="4"/>
+        <text x="625" y="128" id="amp-status" font-family="Roboto Mono" font-size="11" font-weight="700" fill="var(--text-muted)" text-anchor="middle">STATUS: WAIT</text>
+        <text x="625" y="148" font-family="Roboto" font-size="11" font-weight="900" fill="var(--text-muted)" text-anchor="middle">INSTRUMENTATION</text>
+        <text x="625" y="164" font-family="Roboto" font-size="11" font-weight="900" fill="var(--text-muted)" text-anchor="middle">AMPLIFIER</text>
+        <text x="625" y="184" font-family="Roboto" font-size="14" font-weight="900" fill="var(--text-dark)" text-anchor="middle">AD620</text>
+        
+        <path d="M 695,150 L 715,150 L 715,145 L 730,155 L 715,165 L 715,160 L 695,160 Z" fill="#3b82f6" stroke="var(--pipe-border)" stroke-width="1"/>
 
-        <rect x="760" y="110" width="90" height="75" fill="#ffffff" stroke="var(--lcd-border)" stroke-width="2" rx="4"/>
-        <text x="805" y="145" font-family="Inter" font-size="10" font-weight="800" fill="var(--text-muted)" text-anchor="middle">HARDWARE</text>
-        <text x="805" y="165" font-family="Inter" font-size="12" font-weight="800" fill="var(--text-dark)" text-anchor="middle">RC FILTER</text>
-        <path d="M 850,145 L 870,145 L 870,140 L 885,150 L 870,160 L 870,155 L 850,155 Z" fill="#3b82f6" stroke="var(--pipe-border)" stroke-width="1"/>
+        <rect x="740" y="110" width="100" height="85" fill="#ffffff" stroke="var(--lcd-border)" stroke-width="2" rx="4"/>
+        <text x="790" y="150" font-family="Roboto" font-size="12" font-weight="900" fill="var(--text-muted)" text-anchor="middle">HARDWARE</text>
+        <text x="790" y="172" font-family="Roboto" font-size="14" font-weight="900" fill="var(--text-dark)" text-anchor="middle">RC FILTER</text>
+        
+        <path d="M 845,150 L 865,150 L 865,145 L 880,155 L 865,165 L 865,160 L 845,160 Z" fill="#3b82f6" stroke="var(--pipe-border)" stroke-width="1"/>
 
-        <rect x="890" y="110" width="90" height="75" fill="#ffffff" stroke="var(--lcd-border)" stroke-width="2" rx="4"/>
-        <text x="935" y="125" id="adc-status" font-family="JetBrains Mono" font-size="9" font-weight="bold" fill="var(--text-muted)" text-anchor="middle">STATUS: WAIT</text>
-        <text x="935" y="150" font-family="Inter" font-size="10" font-weight="800" fill="var(--text-muted)" text-anchor="middle">16-BIT ADC</text>
-        <text x="935" y="170" font-family="Inter" font-size="12" font-weight="800" fill="var(--text-dark)" text-anchor="middle">AS1115</text>
+        <rect x="890" y="110" width="100" height="85" fill="#ffffff" stroke="var(--lcd-border)" stroke-width="2" rx="4"/>
+        <text x="940" y="128" id="adc-status" font-family="Roboto Mono" font-size="11" font-weight="700" fill="var(--text-muted)" text-anchor="middle">STATUS: WAIT</text>
+        <text x="940" y="155" font-family="Roboto" font-size="12" font-weight="900" fill="var(--text-muted)" text-anchor="middle">16-BIT ADC</text>
+        <text x="940" y="176" font-family="Roboto" font-size="14" font-weight="900" fill="var(--text-dark)" text-anchor="middle">AS1115</text>
     </g>
 
-    <g transform="translate(420, 360)">
-        <rect width="150" height="46" fill="var(--lcd-bg)" rx="4" stroke="var(--lcd-border)" stroke-width="2"/>
-        <text x="75" y="16" font-family="Inter" font-size="10" font-weight="800" fill="var(--text-muted)" text-anchor="middle">PROCESS FLOW RATE</text>
-        <text id="v-flow" x="75" y="36" class="digital-text" font-size="15" fill="var(--val-blue)" text-anchor="middle">--- L/min</text>
+    <g transform="translate(1010, 120)">
+        <rect width="140" height="50" fill="var(--lcd-bg)" rx="4" stroke="var(--lcd-border)" stroke-width="2"/>
+        <text x="70" y="18" font-family="Roboto" font-size="12" font-weight="900" fill="var(--text-muted)" text-anchor="middle">QUANTIZED ADC</text>
+        <text id="v-adc" x="70" y="40" class="digital-text" font-size="18" fill="var(--val-amber)" text-anchor="middle">--- cnts</text>
     </g>
 
-    <g transform="translate(450, 120)">
-        <rect width="140" height="46" fill="var(--lcd-bg)" rx="4" stroke="var(--lcd-border)" stroke-width="2"/>
-        <text x="70" y="16" font-family="Inter" font-size="10" font-weight="800" fill="var(--text-muted)" text-anchor="middle">PRE-AMP INDUCED EMF</text>
-        <text id="v-raw" x="70" y="36" class="digital-text" font-size="15" fill="var(--val-amber)" text-anchor="middle">--- mV</text>
+    <g id="flow-rate-btn" transform="translate(420, 360)">
+        <title>Click to view Flow Rate Analytics</title>
+        <rect width="170" height="50" fill="var(--lcd-bg)" rx="4" stroke="var(--lcd-border)" stroke-width="2" style="transition: all 0.2s;"/>
+        <text x="85" y="18" font-family="Roboto" font-size="12" font-weight="900" fill="var(--text-muted)" text-anchor="middle">PROCESS FLOW RATE</text>
+        <text id="v-flow" x="85" y="40" class="digital-text" font-size="18" fill="var(--val-blue)" text-anchor="middle">--- L/min</text>
     </g>
 
-    <g transform="translate(1000, 120)">
-        <rect width="140" height="46" fill="var(--lcd-bg)" rx="4" stroke="var(--lcd-border)" stroke-width="2"/>
-        <text x="70" y="16" font-family="Inter" font-size="10" font-weight="800" fill="var(--text-muted)" text-anchor="middle">QUANTIZED ADC</text>
-        <text id="v-adc" x="70" y="36" class="digital-text" font-size="15" fill="var(--val-amber)" text-anchor="middle">--- cnts</text>
-    </g>
-
-    <foreignObject x="1170" y="160" width="410" height="480">
-        <div xmlns="http://www.w3.org/1999/xhtml" class="dash-panel" style="width: 100%; height: 100%; box-sizing: border-box;">
-            <div class="dash-title">SYSTEM TELEMETRY</div>
+    <foreignObject x="1170" y="160" width="410" height="350">
+        <div xmlns="http://www.w3.org/1999/xhtml" class="dash-panel" style="width: 100%; height: 100%; box-sizing: border-box; display: flex; flex-direction: column; padding: 15px;">
             
-            <div style="font-size: 13px; color: var(--text-muted); font-weight: bold; margin-bottom: 12px; text-align: center;">
-                SYSTEM UPTIME: <span id="v-uptime" class="digital-text" style="color: var(--text-dark); margin-left: 5px;">--:--:--</span>
+            <div id="connection-status" class="connection-badge" style="align-self: center; margin-bottom: 12px; padding: 10px 30px; font-size: 20px;">
+                <span class="status-dot" style="width: 16px; height: 16px;"></span>
+                <span id="status-text">SYSTEM OFFLINE</span>
             </div>
             
-            <ul class="dash-list">
-                <li><span>KALMAN FILTERED EMF:</span> <span class="dash-val-box" style="color: var(--val-green);" id="v-kalman">— mV</span></li>
-                <li><span>BASELINE OFFSET:</span> <span class="dash-val-box" style="color: var(--text-dark);" id="v-offset">— mV</span></li>
-                <li><span>CUMULATIVE VOLUME:</span> <span class="dash-val-box" style="color: var(--val-blue);" id="v-total-html">— L</span></li>
-                
-                <li><span>CURRENT DRAWN BY COIL:</span> <span class="dash-val-box" style="color: #d97706;" id="v-coil-current">— A</span></li>
-                <li><span>COIL TEMPERATURE:</span> <span class="dash-val-box" style="color: #ef4444;" id="v-coil-temp">— °C</span></li>
-                
-                <li style="flex-direction: column; align-items: flex-start; padding: 15px 0 0 0; border: none; flex: 1;">
-                    <div style="display: flex; justify-content: space-between; width: 100%;">
-                        <span>REAL-TIME GRAPH:</span>
-                    </div>
-                    <div class="chart-container" id="chart-wrapper" style="width: 100%; flex: 1; display: flex; flex-direction: column; box-sizing: border-box;">
-                        <canvas id="flowChart" style="flex: 1;"></canvas>
-                    </div>
-                </li>
-            </ul>
+            <div style="font-size: 16px; color: var(--text-muted); font-weight: bold; margin-bottom: 12px; text-align: center;">
+                SYSTEM UPTIME: <span id="v-uptime" class="digital-text" style="color: var(--text-dark); margin-left: 8px; font-size: 22px;">--:--:--</span>
+            </div>
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; align-content: start; flex: 1;">
+                <div class="em-stat-card" style="padding: 12px;">
+                    <div class="em-stat-title" style="font-size: 13px;">Raw EMF</div>
+                    <div class="em-stat-val" id="tel-raw-emf" style="color: var(--val-amber); font-size: 24px;">-- mV</div>
+                </div>
+                <div class="em-stat-card" style="padding: 12px;">
+                    <div class="em-stat-title" style="font-size: 13px;">Digital Filter Output</div>
+                    <div class="em-stat-val" id="tel-dig-filter" style="color: var(--val-green); font-size: 24px;">-- mV</div>
+                </div>
+                <div class="em-stat-card" style="padding: 12px;">
+                    <div class="em-stat-title" style="font-size: 13px;">Volumetric Flow</div>
+                    <div class="em-stat-val" id="tel-vol-flow" style="color: var(--val-blue); font-size: 24px;">-- L</div>
+                </div>
+                <div class="em-stat-card" style="padding: 12px;">
+                    <div class="em-stat-title" style="font-size: 13px;">Inst. Current</div>
+                    <div class="em-stat-val" id="tel-inst-cur" style="color: var(--val-amber); font-size: 24px;">-- A</div>
+                </div>
+                <div class="em-stat-card" style="padding: 12px;">
+                    <div class="em-stat-title" style="font-size: 13px;">Inst. Temperature</div>
+                    <div class="em-stat-val" id="tel-inst-temp" style="color: var(--val-red); font-size: 24px;">-- °C</div>
+                </div>
+                <div class="em-stat-card" style="padding: 12px;">
+                    <div class="em-stat-title" style="font-size: 13px;">Inst. Coil Voltage</div>
+                    <div class="em-stat-val" id="tel-coil-volt" style="color: var(--val-amber); font-size: 24px;">-- V</div>
+                </div>
+            </div>
         </div>
     </foreignObject>
 
-    <foreignObject x="1170" y="660" width="410" height="210">
-        <div xmlns="http://www.w3.org/1999/xhtml" class="dash-panel" style="width: 100%; height: 100%; box-sizing: border-box; padding: 15px 20px;">
-            <div class="dash-title" style="font-size: 14px; margin-bottom: 8px;">ALERTS LOG</div>
-            <ul class="dash-list" style="line-height: 2;">
-                <li><span>WATER LEVEL (&lt; 20%):</span> <span class="dash-val-box" style="color: #ef4444;" id="log-water">--:--:--</span></li>
-                <li><span>CURRENT DRAWN BY COIL (&ge; 3A):</span> <span class="dash-val-box" style="color: #ef4444;" id="log-current">--:--:--</span></li>
-                <li><span>COIL TEMP (&ge; 70°C):</span> <span class="dash-val-box" style="color: #ef4444;" id="log-temp">--:--:--</span></li>
+    <foreignObject x="1170" y="520" width="410" height="280">
+        <div xmlns="http://www.w3.org/1999/xhtml" class="dash-panel clickable-panel" id="alerts-log-btn" title="Click to view full alerts history" style="width: 100%; height: 100%; box-sizing: border-box; padding: 15px 20px;">
+            <div class="dash-title" style="font-size: 18px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; border-bottom: none;">
+                <span>ALERTS LOG (LAST)</span>
+                <span style="font-size: 12px; color: var(--text-muted); background: #f1f5f9; padding: 6px 10px; border-radius: 4px;">🔍 HISTORY</span>
+            </div>
+            <div style="border-bottom: 2px solid #f1f5f9; margin-bottom: 12px;"></div>
+            <ul class="dash-list" style="line-height: 2.2;">
+                <li style="font-size: 15px;"><span>WATER LEVEL (&lt; 20%):</span> <span class="dash-val-box" style="color: #ef4444; font-size: 16px;" id="log-water">--:--:--</span></li>
+                <li style="font-size: 15px;"><span>COIL CURRENT (&ge; 3A):</span> <span class="dash-val-box" style="color: #ef4444; font-size: 16px;" id="log-current">--:--:--</span></li>
+                <li style="font-size: 15px;"><span>COIL TEMP (&ge; 70°C):</span> <span class="dash-val-box" style="color: #ef4444; font-size: 16px;" id="log-temp">--:--:--</span></li>
             </ul>
         </div>
     </foreignObject>
@@ -570,77 +711,225 @@ function updatePipeFlow(el, shouldFlow) {
     }
 }
 
-const originalWrapper = $('chart-wrapper');
-const modalWrapper = $('modal-chart-wrapper');
-const overlay = $('chart-overlay');
-const flowChartCanvas = $('flowChart');
-const closeBtn = $('close-modal-btn');
+// ----------------------------------------------------
+// ELECTROMAGNET TELEMETRY CHART
+// ----------------------------------------------------
+const emMagnetBtn = $('electro-magnet');
+const emModalOverlay = $('em-modal-overlay');
+const emCloseBtn = $('close-em-modal-btn');
+const emChartCanvas = $('emChartCanvas').getContext('2d');
 
-originalWrapper.addEventListener('click', () => {
-    modalWrapper.appendChild(flowChartCanvas);
-    overlay.classList.add('active');
-    chart.options.scales.x.title.display = true;
-    chart.options.scales.y.title.display = true;
-    chart.options.layout.padding = 20;
-    chart.update();
-});
+// Global Chart configuration defaults for Professional look
+Chart.defaults.font.family = "'Roboto Mono', monospace";
+Chart.defaults.font.size = 12;
 
-closeBtn.addEventListener('click', () => {
-    originalWrapper.appendChild(flowChartCanvas);
-    overlay.classList.remove('active');
-    chart.options.scales.x.title.display = false;
-    chart.options.scales.y.title.display = false;
-    chart.options.layout.padding = 0;
-    chart.update();
-});
-
-const ctx = flowChartCanvas.getContext('2d');
-const chart = new Chart(ctx, {
+const emChart = new Chart(emChartCanvas, {
     type: 'line',
     data: {
         labels: [],
         datasets: [
-            { label: 'RAW NOISE', data: [], borderColor: '#0072BD', backgroundColor: '#0072BD', yAxisID: 'y', fill: false, tension: 0, pointRadius: 0, borderWidth: 1.5 },
-            { label: 'KALMAN FILTER', data: [], borderColor: '#D95319', backgroundColor: '#D95319', yAxisID: 'y', fill: false, tension: 0, pointRadius: 0, borderWidth: 2.0 }
+            {
+                label: 'CURRENT DRAWN (A)',
+                data: [],
+                borderColor: '#d97706',
+                backgroundColor: '#d97706',
+                yAxisID: 'y',
+                fill: false,
+                tension: 0.1,
+                pointRadius: 0,
+                borderWidth: 2
+            },
+            {
+                label: 'COIL TEMPERATURE (°C)',
+                data: [],
+                borderColor: '#ef4444',
+                backgroundColor: '#ef4444',
+                yAxisID: 'y1',
+                fill: false,
+                tension: 0.1,
+                pointRadius: 0,
+                borderWidth: 2
+            }
         ]
     },
     options: {
-        responsive: true, maintainAspectRatio: false, animation: false,
-        layout: { padding: 0 },
-        plugins: { 
-            legend: { labels: { font: { size: 11, family: "'JetBrains Mono', monospace", weight: 'bold' }, color: '#0f172a', boxWidth: 12 }, position: 'top' },
-            tooltip: { enabled: false }
+        responsive: true,
+        maintainAspectRatio: false,
+        animation: false,
+        plugins: {
+            legend: { labels: { font: { size: 14, family: "'Roboto Mono', monospace", weight: '700' }, color: '#0f172a', boxWidth: 15 }, position: 'top' },
+            tooltip: { mode: 'index', intersect: false, titleFont: { size: 14 }, bodyFont: { size: 14 } }
         },
         scales: {
-            x: { 
+            x: {
                 display: true,
-                title: { display: false, text: 'TIME (SAMPLES)', font: { family: "'JetBrains Mono', monospace", weight: 'bold', size: 12 }, color: '#0f172a' },
-                grid: { color: '#e2e8f0', tickLength: 5 },
-                border: { color: '#0f172a', width: 2 },
-                ticks: { font: { family: "'JetBrains Mono', monospace", size: 10 }, color: '#64748b', maxTicksLimit: 10 }
+                title: { display: true, text: 'TIME (HH:MM:SS)', font: { family: "'Roboto Mono', monospace", weight: '700', size: 15 }, color: '#0f172a' },
+                grid: { color: '#e2e8f0' },
+                ticks: { font: { family: "'Roboto Mono', monospace", size: 12 }, maxTicksLimit: 15 }
             },
-            y: { 
+            y: {
+                type: 'linear',
                 display: true,
-                title: { display: false, text: 'AMPLITUDE (mV)', font: { family: "'JetBrains Mono', monospace", weight: 'bold', size: 12 }, color: '#0f172a' },
-                position: 'left', 
-                grid: { color: '#e2e8f0' }, 
-                border: { color: '#0f172a', width: 2 },
-                ticks: { font: { family: "'JetBrains Mono', monospace", size: 10 }, color: '#64748b' }
+                position: 'left',
+                title: { display: true, text: 'CURRENT (A)', font: { family: "'Roboto Mono', monospace", weight: '700', size: 15 }, color: '#d97706' },
+                grid: { color: '#e2e8f0' },
+                min: 0,
+                max: 5,
+                ticks: { color: '#d97706', font: { family: "'Roboto Mono', monospace", weight: '700', size: 13 } }
+            },
+            y1: {
+                type: 'linear',
+                display: true,
+                position: 'right',
+                title: { display: true, text: 'TEMPERATURE (°C)', font: { family: "'Roboto Mono', monospace", weight: '700', size: 15 }, color: '#ef4444' },
+                grid: { drawOnChartArea: false },
+                min: 20,
+                max: 100,
+                ticks: { color: '#ef4444', font: { family: "'Roboto Mono', monospace", weight: '700', size: 13 } }
             }
         }
     }
 });
 
+emMagnetBtn.addEventListener('click', () => {
+    emModalOverlay.classList.add('active');
+    emChart.update();
+});
+emCloseBtn.addEventListener('click', () => {
+    emModalOverlay.classList.remove('active');
+});
+
+// ----------------------------------------------------
+// FLOW RATE ANALYTICS CHART
+// ----------------------------------------------------
+const flowRateBtn = $('flow-rate-btn');
+const flowModalOverlay = $('flow-modal-overlay');
+const flowCloseBtn = $('close-flow-modal-btn');
+const processFlowCtx = $('processFlowCanvas').getContext('2d');
+
+const processFlowChart = new Chart(processFlowCtx, {
+    type: 'line',
+    data: {
+        labels: [],
+        datasets: [
+            {
+                label: 'INSTANTANEOUS FLOW RATE (L/min)',
+                data: [],
+                borderColor: '#0284c7', // val-blue
+                backgroundColor: '#0284c7',
+                fill: false,
+                tension: 0.1,
+                pointRadius: 0,
+                borderWidth: 2
+            }
+        ]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        animation: false,
+        plugins: {
+            legend: { labels: { font: { size: 14, family: "'Roboto Mono', monospace", weight: '700' }, color: '#0f172a', boxWidth: 15 }, position: 'top' },
+            tooltip: { mode: 'index', intersect: false, titleFont: { size: 14 }, bodyFont: { size: 14 } }
+        },
+        scales: {
+            x: {
+                display: true,
+                title: { display: true, text: 'TIME (HH:MM:SS)', font: { family: "'Roboto Mono', monospace", weight: '700', size: 15 }, color: '#0f172a' },
+                grid: { color: '#e2e8f0' },
+                ticks: { font: { family: "'Roboto Mono', monospace", size: 12 }, maxTicksLimit: 15 }
+            },
+            y: {
+                display: true,
+                position: 'left',
+                title: { display: true, text: 'FLOW RATE (L/min)', font: { family: "'Roboto Mono', monospace", weight: '700', size: 15 }, color: '#0284c7' },
+                grid: { color: '#e2e8f0' },
+                ticks: { color: '#0284c7', font: { family: "'Roboto Mono', monospace", weight: '700', size: 13 } }
+            }
+        }
+    }
+});
+
+flowRateBtn.addEventListener('click', () => {
+    flowModalOverlay.classList.add('active');
+    processFlowChart.update();
+});
+flowCloseBtn.addEventListener('click', () => {
+    flowModalOverlay.classList.remove('active');
+});
+
+// ----------------------------------------------------
+// ALERTS HISTORY MODAL LOGIC
+// ----------------------------------------------------
+const alertsHistoryBtn = $('alerts-log-btn');
+const alertsModalOverlay = $('alerts-modal-overlay');
+const closeAlertsModalBtn = $('close-alerts-modal-btn');
+const alertsTableBody = $('alerts-table-body');
+
+let alertsHistoryData = [];
+
+function logSystemAlert(alertType, htmlIdToUpdate) {
+    const now = new Date();
+    const timeStr = now.toLocaleTimeString('en-GB'); // HH:MM:SS
+    const dateStr = now.toLocaleDateString('en-GB'); // DD/MM/YYYY
+    
+    // Add to unified history (newest first)
+    alertsHistoryData.unshift({
+        date: dateStr,
+        time: timeStr,
+        type: alertType
+    });
+    
+    // Update the specific UI element on dashboard
+    $(htmlIdToUpdate).textContent = timeStr;
+    
+    // Update the history table if it's currently open
+    renderAlertsTable();
+}
+
+function renderAlertsTable() {
+    if (alertsHistoryData.length === 0) return;
+    
+    alertsTableBody.innerHTML = alertsHistoryData.map(alert => `
+        <tr>
+            <td style="font-family: 'Roboto Mono', monospace; font-size: 15px;">${alert.date}</td>
+            <td style="font-family: 'Roboto Mono', monospace; font-size: 15px; color: #ef4444;">${alert.time}</td>
+            <td style="color: var(--text-dark); font-size: 15px;">${alert.type}</td>
+        </tr>
+    `).join('');
+}
+
+alertsHistoryBtn.addEventListener('click', () => {
+    renderAlertsTable();
+    alertsModalOverlay.classList.add('active');
+});
+closeAlertsModalBtn.addEventListener('click', () => {
+    alertsModalOverlay.classList.remove('active');
+});
+
+// Historical Aggregation Trackers
+let emTotalCurrent = 0;
+let emTotalTemp = 0;
+let emPeakCur = -Infinity;
+let emPeakTemp = -Infinity;
+let emDataPoints = 0;
+
+let pfTotalRate = 0;
+let pfDataPoints = 0;
+
+// ----------------------------------------------------
+// TELEMETRY LOGIC
+// ----------------------------------------------------
 const fmt = (v, d=2) => (v != null && v !== undefined && v !== '') ? parseFloat(v).toFixed(d) : '---';
 const fmtTime = s => (s != null && s !== undefined) ? [Math.floor(s/3600), Math.floor((s%3600)/60), s%60].map(n => String(n).padStart(2,'0')).join(':') : '--:--:--';
-const getLogTime = () => new Date().toLocaleTimeString('en-US', { hour12: false });
+
+const getLogTime = () => new Date().toLocaleTimeString('en-GB');
 
 $('toggle-ma').addEventListener('change', e => set(ref(db, 'telemetry/motors/a_on'), e.target.checked));
 $('toggle-mb').addEventListener('change', e => set(ref(db, 'telemetry/motors/b_on'), e.target.checked));
 $('toggle-solenoid').addEventListener('change', e => set(ref(db, 'telemetry/valves/solenoid_on'), e.target.checked));
 $('toggle-dcpump').addEventListener('change', e => set(ref(db, 'telemetry/motors/dc_pump_on'), e.target.checked));
 
-// Master Coils Toggle updates both a_on and b_on
 $('toggle-coils').addEventListener('change', e => {
     const checked = e.target.checked;
     set(ref(db, 'telemetry/magnets/a_on'), checked);
@@ -657,10 +946,10 @@ const CONNECTION_TIMEOUT = 5000;
 function updateConnectionStatus(isConnected) {
     if (isConnected) {
         statusBadge.classList.add('connected');
-        statusText.textContent = 'SYSTEM CONNECTED';
+        statusText.textContent = 'SYSTEM ONLINE';
     } else {
         statusBadge.classList.remove('connected');
-        statusText.textContent = 'DISCONNECTED';
+        statusText.textContent = 'SYSTEM OFFLINE';
     }
 }
 
@@ -670,14 +959,14 @@ setInterval(() => {
     }
 }, 1000);
 
-let sampleCount = 0;
 let waterAlertActive = false;
 let currentAlertActive = false;
 let tempAlertActive = false;
 
-// TELEMETRY LISTENER
+// FIREBASE ON VALUE LISTENER
 onValue(ref(db, 'telemetry'), snap => {
     const d = snap.val() || {};
+    const nowTime = getLogTime();
     
     lastDataTime = Date.now();
     updateConnectionStatus(true);
@@ -727,7 +1016,7 @@ onValue(ref(db, 'telemetry'), snap => {
     updatePipeFlow(cBypassPre, flow);
     updatePipeFlow(cBypassPost, (flow || dcPump) && solenoid);
 
-    // TANK LOGIC
+    // TANK LOGIC & WATER ALERT
     const levelPct = d.tank?.level_pct ?? 100;
     const fillHeight = (levelPct / 100) * 532;
     const fillY = 866 - fillHeight;
@@ -741,55 +1030,108 @@ onValue(ref(db, 'telemetry'), snap => {
     if (levelPct < 20) {
         alertText.classList.remove('alert-hidden');
         alertText.classList.add('alert-active');
-        if (!waterAlertActive) { $('log-water').textContent = getLogTime(); waterAlertActive = true; }
+        if (!waterAlertActive) { 
+            logSystemAlert('WATER LEVEL (< 20%)', 'log-water');
+            waterAlertActive = true; 
+        }
     } else {
         alertText.classList.add('alert-hidden');
         alertText.classList.remove('alert-active');
         waterAlertActive = false;
     }
 
-    // CURRENT & TEMP ALERTS
+    // ALERTS & DATA EXTRACTION
     const current_a = d.magnets?.current_a ?? 0;
     const temp_c = d.coil_temp ?? 0;
+    const coil_volt = d.magnets?.voltage ?? 0;
+    const raw_emf = d.signals?.raw_emf;
+    const kalman_emf = d.signals?.kalman_emf;
+    const flow_rate = d.flow?.rate;
+    const total_vol = d.flow?.total;
     
-    let curAlertHtml = '';
     if (current_a >= 3) {
-        curAlertHtml = ' <span style="color:#ef4444; font-size:10px;">⚠️ HIGH</span>';
-        if (!currentAlertActive) { $('log-current').textContent = getLogTime(); currentAlertActive = true; }
+        if (!currentAlertActive) { 
+            logSystemAlert('COIL CURRENT (>= 3A)', 'log-current');
+            currentAlertActive = true; 
+        }
     } else {
         currentAlertActive = false;
     }
 
-    let tempAlertHtml = '';
     if (temp_c >= 70) {
-        tempAlertHtml = ' <span style="color:#ef4444; font-size:10px;">⚠️ HIGH</span>';
-        if (!tempAlertActive) { $('log-temp').textContent = getLogTime(); tempAlertActive = true; }
+        if (!tempAlertActive) { 
+            logSystemAlert('COIL TEMPERATURE (>= 70°C)', 'log-temp');
+            tempAlertActive = true; 
+        }
     } else {
         tempAlertActive = false;
     }
 
-    $('v-raw').textContent            = fmt(d.signals?.raw_emf, 4);
+    // Update Top Digits
+    $('v-raw').textContent            = fmt(raw_emf, 4);
     $('v-adc').textContent            = (d.signals?.adc_emf != null) ? d.signals.adc_emf : '---';
-    $('v-kalman').textContent         = fmt(d.signals?.kalman_emf, 4) + ' mV';
-    $('v-offset').textContent         = fmt(d.signals?.offset, 4) + ' mV';
-    $('v-total-html').textContent     = fmt(d.flow?.total, 1) + ' L';
-    $('v-flow').textContent           = fmt(d.flow?.rate, 2);
+    $('v-flow').textContent           = fmt(flow_rate, 2);
     $('v-uptime').textContent         = fmtTime(d.flow?.uptime);
-    
-    $('v-coil-current').innerHTML     = (d.magnets?.current_a != null) ? fmt(current_a, 2) + ' A' + curAlertHtml : '--- A';
-    $('v-coil-temp').innerHTML        = (d.coil_temp !== undefined && d.coil_temp !== null) ? fmt(temp_c, 1) + ' °C' + tempAlertHtml : '--- °C';
 
-    if (d.signals && typeof d.signals.raw_emf === 'number') {
-        chart.data.labels.push(sampleCount++);
-        chart.data.datasets[0].data.push(d.signals.raw_emf); 
-        chart.data.datasets[1].data.push(d.signals.kalman_emf || 0);
-        
-        if (chart.data.labels.length > 100) {
-            chart.data.labels.shift();
-            chart.data.datasets[0].data.shift();
-            chart.data.datasets[1].data.shift();
+    // Update Main System Telemetry Grid Cards
+    $('tel-raw-emf').textContent      = fmt(raw_emf, 4) + ' mV';
+    $('tel-dig-filter').textContent   = fmt(kalman_emf, 4) + ' mV';
+    $('tel-vol-flow').textContent     = fmt(total_vol, 1) + ' L';
+    $('tel-inst-cur').textContent     = fmt(current_a, 2) + ' A';
+    $('tel-inst-temp').textContent    = fmt(temp_c, 1) + ' °C';
+    $('tel-coil-volt').textContent    = fmt(coil_volt, 2) + ' V';
+
+    // Update Electromagnet Modal
+    if (d.magnets && typeof current_a === 'number' && typeof temp_c === 'number') {
+        emDataPoints++;
+        emTotalCurrent += current_a;
+        emTotalTemp += temp_c;
+        if (temp_c > emPeakTemp) emPeakTemp = temp_c;
+        if (current_a > emPeakCur) emPeakCur = current_a;
+
+        $('em-inst-cur').textContent = current_a.toFixed(2) + ' A';
+        $('em-inst-temp').textContent = temp_c.toFixed(1) + ' °C';
+        $('em-peak-cur').textContent = (emPeakCur === -Infinity ? 0 : emPeakCur).toFixed(2) + ' A';
+        $('em-peak-temp').textContent = (emPeakTemp === -Infinity ? 0 : emPeakTemp).toFixed(1) + ' °C';
+        $('em-avg-cur').textContent = (emTotalCurrent / emDataPoints).toFixed(2) + ' A';
+        $('em-avg-temp').textContent = (emTotalTemp / emDataPoints).toFixed(1) + ' °C';
+
+        emChart.data.labels.push(nowTime);
+        emChart.data.datasets[0].data.push(current_a);
+        emChart.data.datasets[1].data.push(temp_c);
+
+        if (emChart.data.labels.length > 100) {
+            emChart.data.labels.shift();
+            emChart.data.datasets[0].data.shift();
+            emChart.data.datasets[1].data.shift();
         }
-        chart.update('none'); 
+        
+        if (emModalOverlay.classList.contains('active')) {
+            emChart.update('none');
+        }
+    }
+
+    // Update Flow Rate Modal
+    if (typeof flow_rate === 'number' && typeof raw_emf === 'number') {
+        pfDataPoints++;
+        pfTotalRate += flow_rate;
+
+        $('flow-inst-raw').textContent = raw_emf.toFixed(4) + ' mV';
+        $('flow-total-vol').textContent = (total_vol || 0).toFixed(1) + ' L';
+        $('flow-inst-rate').textContent = flow_rate.toFixed(2) + ' L/min';
+        $('flow-avg-rate').textContent = (pfTotalRate / pfDataPoints).toFixed(2) + ' L/min';
+
+        processFlowChart.data.labels.push(nowTime);
+        processFlowChart.data.datasets[0].data.push(flow_rate);
+
+        if (processFlowChart.data.labels.length > 100) {
+            processFlowChart.data.labels.shift();
+            processFlowChart.data.datasets[0].data.shift();
+        }
+        
+        if (flowModalOverlay.classList.contains('active')) {
+            processFlowChart.update('none');
+        }
     }
 });
 </script>
