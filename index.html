@@ -5,8 +5,12 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>EcoFlow-IoT | Industrial SCADA HMI</title>
 
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preconnect" href="https://www.gstatic.com">
+
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=JetBrains+Mono:wght@400;700;800&display=swap" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js" defer></script>
 
 <style>
     /* ==========================================
@@ -81,12 +85,12 @@
         width: 10px;
         height: 10px;
         border-radius: 50%;
-        background: #ef4444; /* Disconnected Red */
+        background: #ef4444; 
         box-shadow: 0 0 6px rgba(239, 68, 68, 0.6);
         transition: all 0.3s ease;
     }
     .connection-badge.connected .status-dot {
-        background: #10b981; /* Connected Green */
+        background: #10b981; 
         box-shadow: 0 0 8px rgba(16, 185, 129, 0.8);
     }
     .connection-badge.connected #status-text {
@@ -116,9 +120,8 @@
     @keyframes spin { to { transform: rotate(360deg); } }
     .spinning { animation: spin 0.8s linear infinite; transform-origin: center; transform-box: fill-box; }
 
+    /* Values dynamically applied via JS to avoid Safari CSS variable bugs */
     .pipe-core { 
-        stroke-dasharray: var(--len, 3000);
-        stroke-dashoffset: var(--len, 3000);
         opacity: 1; 
     }
 
@@ -286,7 +289,7 @@
     <text x="120" y="815" font-family="Inter" font-size="11" font-weight="800" fill="var(--text-dark)" text-anchor="middle">MOTOR A</text>
     
     <foreignObject x="90" y="825" width="60" height="50">
-        <div xmlns="http://www.w3.org/1999/xhtml" style="display:flex; flex-direction:column; align-items:center;">
+        <div xmlns="http://www.w3.org/1999/xhtml" style="width: 100%; height: 100%; display:flex; flex-direction:column; align-items:center;">
             <div class="switch-label">ON/OFF</div>
             <label class="switch"><input type="checkbox" id="toggle-ma"><span class="slider"></span></label>
         </div>
@@ -300,14 +303,14 @@
     <text x="230" y="815" font-family="Inter" font-size="11" font-weight="800" fill="var(--text-dark)" text-anchor="middle">MOTOR B</text>
 
     <foreignObject x="200" y="825" width="60" height="50">
-        <div xmlns="http://www.w3.org/1999/xhtml" style="display:flex; flex-direction:column; align-items:center;">
+        <div xmlns="http://www.w3.org/1999/xhtml" style="width: 100%; height: 100%; display:flex; flex-direction:column; align-items:center;">
             <div class="switch-label">ON/OFF</div>
             <label class="switch"><input type="checkbox" id="toggle-mb"><span class="slider"></span></label>
         </div>
     </foreignObject>
 
     <foreignObject x="320" y="730" width="160" height="130">
-        <div xmlns="http://www.w3.org/1999/xhtml" class="in-situ-control" style="gap: 12px; padding: 12px;">
+        <div xmlns="http://www.w3.org/1999/xhtml" class="in-situ-control" style="width: 100%; height: 100%; gap: 12px; padding: 12px; box-sizing: border-box;">
             <span style="font-size: 10px; font-weight: bold; color: var(--text-muted); border-bottom: 1px solid #e2e8f0; width: 100%; text-align: center; padding-bottom: 4px;">PUMP SPEEDS</span>
             
             <div style="width: 100%; display: flex; flex-direction: column; gap: 4px;">
@@ -347,7 +350,7 @@
     </g>
 
     <foreignObject x="410" y="500" width="120" height="50">
-        <div xmlns="http://www.w3.org/1999/xhtml" style="display:flex; flex-direction:column; align-items:center;">
+        <div xmlns="http://www.w3.org/1999/xhtml" style="width: 100%; height: 100%; display:flex; flex-direction:column; align-items:center;">
             <div class="switch-label">ON/OFF</div>
             <label class="switch"><input type="checkbox" id="toggle-dcpump"><span class="slider"></span></label>
         </div>
@@ -362,7 +365,7 @@
     </g>
 
     <foreignObject x="630" y="500" width="80" height="50">
-        <div xmlns="http://www.w3.org/1999/xhtml" style="display:flex; flex-direction:column; align-items:center;">
+        <div xmlns="http://www.w3.org/1999/xhtml" style="width: 100%; height: 100%; display:flex; flex-direction:column; align-items:center;">
             <div class="switch-label">ON/OFF</div>
             <label class="switch"><input type="checkbox" id="toggle-solenoid"><span class="slider"></span></label>
         </div>
@@ -391,7 +394,7 @@
     </g>
 
     <foreignObject x="970" y="280" width="70" height="60">
-        <div xmlns="http://www.w3.org/1999/xhtml" style="display:flex; flex-direction:column; align-items:center;">
+        <div xmlns="http://www.w3.org/1999/xhtml" style="width: 100%; height: 100%; display:flex; flex-direction:column; align-items:center;">
             <div class="switch-label" style="color: var(--text-dark);">COILS</div>
             <div class="switch-label">ON/OFF</div>
             <label class="switch"><input type="checkbox" id="toggle-coils"><span class="slider"></span></label>
@@ -438,7 +441,7 @@
     </g>
 
     <foreignObject x="1170" y="160" width="410" height="480">
-        <div xmlns="http://www.w3.org/1999/xhtml" class="dash-panel">
+        <div xmlns="http://www.w3.org/1999/xhtml" class="dash-panel" style="width: 100%; height: 100%; box-sizing: border-box;">
             <div class="dash-title">SYSTEM TELEMETRY</div>
             
             <div style="font-size: 13px; color: var(--text-muted); font-weight: bold; margin-bottom: 12px; text-align: center;">
@@ -457,7 +460,7 @@
                     <div style="display: flex; justify-content: space-between; width: 100%;">
                         <span>REAL-TIME GRAPH:</span>
                     </div>
-                    <div class="chart-container" id="chart-wrapper" style="width: 100%; flex: 1; display: flex; flex-direction: column;">
+                    <div class="chart-container" id="chart-wrapper" style="width: 100%; flex: 1; display: flex; flex-direction: column; box-sizing: border-box;">
                         <canvas id="flowChart" style="flex: 1;"></canvas>
                     </div>
                 </li>
@@ -466,7 +469,7 @@
     </foreignObject>
 
     <foreignObject x="1170" y="660" width="410" height="210">
-        <div xmlns="http://www.w3.org/1999/xhtml" class="dash-panel" style="padding: 15px 20px;">
+        <div xmlns="http://www.w3.org/1999/xhtml" class="dash-panel" style="width: 100%; height: 100%; box-sizing: border-box; padding: 15px 20px;">
             <div class="dash-title" style="font-size: 14px; margin-bottom: 8px;">ALERTS LOG</div>
             <ul class="dash-list" style="line-height: 2;">
                 <li><span>WATER LEVEL (&lt; 20%):</span> <span class="dash-val-box" style="color: #ef4444;" id="log-water">--:--:--</span></li>
@@ -479,9 +482,24 @@
 </svg>
 </div>
 
+<script>
+    (function() {
+        const pipes = ['core-leg-a', 'core-leg-b', 'core-trunk', 'core-main-loop', 'core-bypass-pre', 'core-bypass-post'];
+        pipes.forEach(id => {
+            const el = document.getElementById(id);
+            if (el && el.getTotalLength) {
+                const len = el.getTotalLength();
+                el.style.strokeDasharray = len;
+                el.style.strokeDashoffset = len;
+                el.style.setProperty('--len', len);
+            }
+        });
+    })();
+</script>
+
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-import { getDatabase, ref, onValue, set, get } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+import { getDatabase, ref, onValue, set } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
 const firebaseConfig = {
     apiKey:            "AIzaSyA9TrLnpHEsRijt8hbljFrJA0AU2c-Jk5g",
@@ -534,13 +552,6 @@ speedMb.addEventListener('input', e => {
 });
 speedMa.addEventListener('change', e => set(ref(db, 'telemetry/motors/a_speed'), parseInt(e.target.value)));
 speedMb.addEventListener('change', e => set(ref(db, 'telemetry/motors/b_speed'), parseInt(e.target.value)));
-
-const pipes = [cLegA, cLegB, cTrunk, cMain, cBypassPre, cBypassPost];
-pipes.forEach(p => {
-    if (p && p.getTotalLength) {
-        p.style.setProperty('--len', p.getTotalLength());
-    }
-});
 
 const pipeStates = new Map();
 function updatePipeFlow(el, shouldFlow) {
@@ -628,8 +639,15 @@ $('toggle-ma').addEventListener('change', e => set(ref(db, 'telemetry/motors/a_o
 $('toggle-mb').addEventListener('change', e => set(ref(db, 'telemetry/motors/b_on'), e.target.checked));
 $('toggle-solenoid').addEventListener('change', e => set(ref(db, 'telemetry/valves/solenoid_on'), e.target.checked));
 $('toggle-dcpump').addEventListener('change', e => set(ref(db, 'telemetry/motors/dc_pump_on'), e.target.checked));
-$('toggle-coils').addEventListener('change', e => set(ref(db, 'telemetry/magnets/a_on'), e.target.checked)); 
 
+// Master Coils Toggle updates both a_on and b_on
+$('toggle-coils').addEventListener('change', e => {
+    const checked = e.target.checked;
+    set(ref(db, 'telemetry/magnets/a_on'), checked);
+    set(ref(db, 'telemetry/magnets/b_on'), checked);
+});
+
+// Watchdog Logic
 const statusBadge = $('connection-status');
 const statusText = $('status-text');
 
@@ -709,6 +727,7 @@ onValue(ref(db, 'telemetry'), snap => {
     updatePipeFlow(cBypassPre, flow);
     updatePipeFlow(cBypassPost, (flow || dcPump) && solenoid);
 
+    // TANK LOGIC
     const levelPct = d.tank?.level_pct ?? 100;
     const fillHeight = (levelPct / 100) * 532;
     const fillY = 866 - fillHeight;
@@ -729,9 +748,9 @@ onValue(ref(db, 'telemetry'), snap => {
         waterAlertActive = false;
     }
 
-    // --- UPDATED COIL TEMP AND ALERTS ---
+    // CURRENT & TEMP ALERTS
     const current_a = d.magnets?.current_a ?? 0;
-    const temp_c = d.coil_temp ?? 0; // Reading from /telemetry/coil_temp
+    const temp_c = d.coil_temp ?? 0;
     
     let curAlertHtml = '';
     if (current_a >= 3) {
@@ -758,8 +777,6 @@ onValue(ref(db, 'telemetry'), snap => {
     $('v-uptime').textContent         = fmtTime(d.flow?.uptime);
     
     $('v-coil-current').innerHTML     = (d.magnets?.current_a != null) ? fmt(current_a, 2) + ' A' + curAlertHtml : '--- A';
-    
-    // Safely injects the temperature value into the HTML
     $('v-coil-temp').innerHTML        = (d.coil_temp !== undefined && d.coil_temp !== null) ? fmt(temp_c, 1) + ' °C' + tempAlertHtml : '--- °C';
 
     if (d.signals && typeof d.signals.raw_emf === 'number') {
