@@ -765,37 +765,41 @@ onValue(ref(db, 'telemetry'), snap => {
     }
 
     // CURRENT & TEMP ALERTS
-    const current_a = d.magnets?.current_a ?? 0;
-    const temp_c = d.magnets?.temp_c ?? 0;
-    
-    let curAlertHtml = '';
-    if (current_a >= 3) {
-        curAlertHtml = ' <span style="color:#ef4444; font-size:10px;">⚠️ HIGH</span>';
-        if (!currentAlertActive) { $('log-current').textContent = getLogTime(); currentAlertActive = true; }
-    } else {
-        currentAlertActive = false;
-    }
+    const current_a = d.magnets?.current_a ?? 0;
+    
+    // FIXED: Read directly from telemetry.coil_temp instead of magnets.temp_c
+    const temp_c = d.coil_temp ?? 0; 
+    
+    let curAlertHtml = '';
+    if (current_a >= 3) {
+        curAlertHtml = ' <span style="color:#ef4444; font-size:10px;">⚠️ HIGH</span>';
+        if (!currentAlertActive) { $('log-current').textContent = getLogTime(); currentAlertActive = true; }
+    } else {
+        currentAlertActive = false;
+    }
 
-    let tempAlertHtml = '';
-    if (temp_c >= 70) {
-        tempAlertHtml = ' <span style="color:#ef4444; font-size:10px;">⚠️ HIGH</span>';
-        if (!tempAlertActive) { $('log-temp').textContent = getLogTime(); tempAlertActive = true; }
-    } else {
-        tempAlertActive = false;
-    }
+    let tempAlertHtml = '';
+    if (temp_c >= 70) {
+        tempAlertHtml = ' <span style="color:#ef4444; font-size:10px;">⚠️ HIGH</span>';
+        if (!tempAlertActive) { $('log-temp').textContent = getLogTime(); tempAlertActive = true; }
+    } else {
+        tempAlertActive = false;
+    }
 
-    // LCD Displays
-    $('v-raw').textContent            = fmt(d.signals?.raw_emf, 4);
-    $('v-adc').textContent            = (d.signals?.adc_emf != null) ? d.signals.adc_emf : '---';
-    $('v-kalman').textContent         = fmt(d.signals?.kalman_emf, 4) + ' mV';
-    $('v-offset').textContent         = fmt(d.signals?.offset, 4) + ' mV';
-    $('v-total-html').textContent     = fmt(d.flow?.total, 1) + ' L';
-    $('v-flow').textContent           = fmt(d.flow?.rate, 2);
-    $('v-uptime').textContent         = fmtTime(d.flow?.uptime);
+    // LCD Displays
+    $('v-raw').textContent            = fmt(d.signals?.raw_emf, 4);
+    $('v-adc').textContent            = (d.signals?.adc_emf != null) ? d.signals.adc_emf : '---';
+    $('v-kalman').textContent         = fmt(d.signals?.kalman_emf, 4) + ' mV';
+    $('v-offset').textContent         = fmt(d.signals?.offset, 4) + ' mV';
+    $('v-total-html').textContent     = fmt(d.flow?.total, 1) + ' L';
+    $('v-flow').textContent           = fmt(d.flow?.rate, 2);
+    $('v-uptime').textContent         = fmtTime(d.flow?.uptime);
+    
+    // Coil Stats
+    $('v-coil-current').innerHTML     = (d.magnets?.current_a != null) ? fmt(current_a, 2) + ' A' + curAlertHtml : '--- A';
     
-    // Coil Stats
-    $('v-coil-current').innerHTML     = (d.magnets?.current_a != null) ? fmt(current_a, 2) + ' A' + curAlertHtml : '--- A';
-    $('v-coil-temp').innerHTML        = (d.magnets?.temp_c != null) ? fmt(temp_c, 1) + ' °C' + tempAlertHtml : '--- °C';
+    // FIXED: Check d.coil_temp instead of d.magnets.temp_c
+    $('v-coil-temp').innerHTML        = (d.coil_temp != null) ? fmt(temp_c, 1) + ' °C' + tempAlertHtml : '--- °C';
 
     // Chart Update
     if (d.signals && typeof d.signals.raw_emf === 'number') {
