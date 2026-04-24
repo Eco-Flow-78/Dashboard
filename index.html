@@ -628,24 +628,13 @@ $('toggle-ma').addEventListener('change', e => set(ref(db, 'telemetry/motors/a_o
 $('toggle-mb').addEventListener('change', e => set(ref(db, 'telemetry/motors/b_on'), e.target.checked));
 $('toggle-solenoid').addEventListener('change', e => set(ref(db, 'telemetry/valves/solenoid_on'), e.target.checked));
 $('toggle-dcpump').addEventListener('change', e => set(ref(db, 'telemetry/motors/dc_pump_on'), e.target.checked));
+$('toggle-coils').addEventListener('change', e => set(ref(db, 'telemetry/magnets/a_on'), e.target.checked)); 
 
-// ==========================================
-// MASTER COILS TOGGLE - UPDATED
-// Now reads and writes strictly to /telemetry/magnets/a_on
-// ==========================================
-$('toggle-coils').addEventListener('change', e => {
-    const checked = e.target.checked;
-    set(ref(db, 'telemetry/magnets/a_on'), checked); 
-});
-
-// --- REAL-TIME WATCHDOG (HARDWARE HEARTBEAT) ---
 const statusBadge = $('connection-status');
 const statusText = $('status-text');
 
 let lastDataTime = 0;
-let lastRawEmf = null;  // NEW: Memory for hardware values
-let lastUptime = null;  // NEW: Memory for hardware values
-const CONNECTION_TIMEOUT = 5000; // 5 seconds without HARDWARE updates = disconnected
+const CONNECTION_TIMEOUT = 5000; 
 
 function updateConnectionStatus(isConnected) {
     if (isConnected) {
@@ -663,7 +652,6 @@ setInterval(() => {
     }
 }, 1000);
 
-
 let sampleCount = 0;
 let waterAlertActive = false;
 let currentAlertActive = false;
@@ -673,18 +661,8 @@ let tempAlertActive = false;
 onValue(ref(db, 'telemetry'), snap => {
     const d = snap.val() || {};
     
-    // === 1. THE HARDWARE HEARTBEAT UPGRADE ===
-    const currentRaw = d.signals?.raw_emf;
-    const currentUptime = d.flow?.uptime;
-    
-    // Only update the connection watchdog if the ESP32 is actively pushing NEW telemetry
-    if (currentRaw !== lastRawEmf || currentUptime !== lastUptime) {
-        lastDataTime = Date.now();
-        lastRawEmf = currentRaw;
-        lastUptime = currentUptime;
-        updateConnectionStatus(true);
-    }
-    // ==========================================
+    lastDataTime = Date.now();
+    updateConnectionStatus(true);
     
     if (snap.exists() && Object.keys(d).length > 0) {
         ampStatus.textContent = 'STATUS: ON'; ampStatus.style.fill = '#059669'; 
@@ -697,10 +675,6 @@ onValue(ref(db, 'telemetry'), snap => {
     const ma       = d.motors?.a_on || false;
     const mb       = d.motors?.b_on || false;
     const dcPump   = d.motors?.dc_pump_on || false;
-    
-    // ==========================================
-    // ELECTROMAGNET STATE SYNC - UPDATED
-    // ==========================================
     const ema      = d.magnets?.a_on || false;
     const solenoid = d.valves?.solenoid_on || false;
     const flow     = ma || mb;
@@ -708,17 +682,12 @@ onValue(ref(db, 'telemetry'), snap => {
     const maSpd    = d.motors?.a_speed ?? 100;
     const mbSpd    = d.motors?.b_speed ?? 100;
 
-    // Toggles
     $('toggle-ma').checked = ma;
     $('toggle-mb').checked = mb;
-    
-    // Sync the HMI switch to match the database/hardware state
     $('toggle-coils').checked = ema;
-    
     $('toggle-solenoid').checked = solenoid;
     $('toggle-dcpump').checked = dcPump;
     
-    // Sliders
     if (document.activeElement !== speedMa) {
         speedMa.value = maSpd; valMaSpd.textContent = maSpd + '%'; updateGearSpeed(gearA, maSpd);
     }
@@ -726,16 +695,13 @@ onValue(ref(db, 'telemetry'), snap => {
         speedMb.value = mbSpd; valMbSpd.textContent = mbSpd + '%'; updateGearSpeed(gearB, mbSpd);
     }
 
-    // Spin Animations
     gearA.classList.toggle('spinning', ma);
     gearB.classList.toggle('spinning', mb);
     gearDC.classList.toggle('spinning', dcPump);
     
-    // Coils Visual Sync
     coilA_bg.style.fill = ema ? '#d97706' : '#94a3b8';
     coilB_bg.style.fill = ema ? '#d97706' : '#94a3b8';
     
-    // Water Pipes
     updatePipeFlow(cLegA, ma);
     updatePipeFlow(cLegB, mb);
     updatePipeFlow(cTrunk, flow);
@@ -743,7 +709,6 @@ onValue(ref(db, 'telemetry'), snap => {
     updatePipeFlow(cBypassPre, flow);
     updatePipeFlow(cBypassPost, (flow || dcPump) && solenoid);
 
-    // WATER TANK LOGIC & ALERT
     const levelPct = d.tank?.level_pct ?? 100;
     const fillHeight = (levelPct / 100) * 532;
     const fillY = 866 - fillHeight;
@@ -764,44 +729,39 @@ onValue(ref(db, 'telemetry'), snap => {
         waterAlertActive = false;
     }
 
-    // CURRENT & TEMP ALERTS
-    const current_a = d.magnets?.current_a ?? 0;
-    
-    // FIXED: Read directly from telemetry.coil_temp instead of magnets.temp_c
-    const temp_c = d.coil_temp ?? 0; 
-    
-    let curAlertHtml = '';
-    if (current_a >= 3) {
-        curAlertHtml = ' <span style="color:#ef4444; font-size:10px;">⚠️ HIGH</span>';
-        if (!currentAlertActive) { $('log-current').textContent = getLogTime(); currentAlertActive = true; }
-    } else {
-        currentAlertActive = false;
-    }
-
-    let tempAlertHtml = '';
-    if (temp_c >= 70) {
-        tempAlertHtml = ' <span style="color:#ef4444; font-size:10px;">⚠️ HIGH</span>';
-        if (!tempAlertActive) { $('log-temp').textContent = getLogTime(); tempAlertActive = true; }
-    } else {
-        tempAlertActive = false;
-    }
-
-    // LCD Displays
-    $('v-raw').textContent            = fmt(d.signals?.raw_emf, 4);
-    $('v-adc').textContent            = (d.signals?.adc_emf != null) ? d.signals.adc_emf : '---';
-    $('v-kalman').textContent         = fmt(d.signals?.kalman_emf, 4) + ' mV';
-    $('v-offset').textContent         = fmt(d.signals?.offset, 4) + ' mV';
-    $('v-total-html').textContent     = fmt(d.flow?.total, 1) + ' L';
-    $('v-flow').textContent           = fmt(d.flow?.rate, 2);
-    $('v-uptime').textContent         = fmtTime(d.flow?.uptime);
-    
-    // Coil Stats
-    $('v-coil-current').innerHTML     = (d.magnets?.current_a != null) ? fmt(current_a, 2) + ' A' + curAlertHtml : '--- A';
+    // --- UPDATED COIL TEMP AND ALERTS ---
+    const current_a = d.magnets?.current_a ?? 0;
+    const temp_c = d.coil_temp ?? 0; // Reading from /telemetry/coil_temp
     
-    // FIXED: Check d.coil_temp instead of d.magnets.temp_c
-    $('v-coil-temp').innerHTML        = (d.coil_temp != null) ? fmt(temp_c, 1) + ' °C' + tempAlertHtml : '--- °C';
+    let curAlertHtml = '';
+    if (current_a >= 3) {
+        curAlertHtml = ' <span style="color:#ef4444; font-size:10px;">⚠️ HIGH</span>';
+        if (!currentAlertActive) { $('log-current').textContent = getLogTime(); currentAlertActive = true; }
+    } else {
+        currentAlertActive = false;
+    }
 
-    // Chart Update
+    let tempAlertHtml = '';
+    if (temp_c >= 70) {
+        tempAlertHtml = ' <span style="color:#ef4444; font-size:10px;">⚠️ HIGH</span>';
+        if (!tempAlertActive) { $('log-temp').textContent = getLogTime(); tempAlertActive = true; }
+    } else {
+        tempAlertActive = false;
+    }
+
+    $('v-raw').textContent            = fmt(d.signals?.raw_emf, 4);
+    $('v-adc').textContent            = (d.signals?.adc_emf != null) ? d.signals.adc_emf : '---';
+    $('v-kalman').textContent         = fmt(d.signals?.kalman_emf, 4) + ' mV';
+    $('v-offset').textContent         = fmt(d.signals?.offset, 4) + ' mV';
+    $('v-total-html').textContent     = fmt(d.flow?.total, 1) + ' L';
+    $('v-flow').textContent           = fmt(d.flow?.rate, 2);
+    $('v-uptime').textContent         = fmtTime(d.flow?.uptime);
+    
+    $('v-coil-current').innerHTML     = (d.magnets?.current_a != null) ? fmt(current_a, 2) + ' A' + curAlertHtml : '--- A';
+    
+    // Safely injects the temperature value into the HTML
+    $('v-coil-temp').innerHTML        = (d.coil_temp !== undefined && d.coil_temp !== null) ? fmt(temp_c, 1) + ' °C' + tempAlertHtml : '--- °C';
+
     if (d.signals && typeof d.signals.raw_emf === 'number') {
         chart.data.labels.push(sampleCount++);
         chart.data.datasets[0].data.push(d.signals.raw_emf); 
@@ -815,7 +775,6 @@ onValue(ref(db, 'telemetry'), snap => {
         chart.update('none'); 
     }
 });
-
 </script>
 </body>
 </html>
