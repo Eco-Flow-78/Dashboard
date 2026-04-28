@@ -31,6 +31,7 @@
         --val-green: #059669;
         --val-amber: #d97706;
         --val-red: #ef4444;
+        --val-purple: #8b5cf6; /* Added for Power */
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -408,10 +409,10 @@
     </g>
     <text x="120" y="815" font-family="Roboto" font-size="13" font-weight="900" fill="var(--text-dark)" text-anchor="middle">MOTOR A</text>
     
-    <foreignObject x="90" y="825" width="60" height="50">
+    <foreignObject x="145" y="825" width="60" height="50">
         <div xmlns="http://www.w3.org/1999/xhtml" style="width: 100%; height: 100%; display:flex; flex-direction:column; align-items:center;">
             <div class="switch-label">ON/OFF</div>
-            <label class="switch"><input type="checkbox" id="toggle-ma"><span class="slider"></span></label>
+            <label class="switch"><input type="checkbox" id="toggle-motors"><span class="slider"></span></label>
         </div>
     </foreignObject>
 
@@ -422,32 +423,16 @@
     </g>
     <text x="230" y="815" font-family="Roboto" font-size="13" font-weight="900" fill="var(--text-dark)" text-anchor="middle">MOTOR B</text>
 
-    <foreignObject x="200" y="825" width="60" height="50">
-        <div xmlns="http://www.w3.org/1999/xhtml" style="width: 100%; height: 100%; display:flex; flex-direction:column; align-items:center;">
-            <div class="switch-label">ON/OFF</div>
-            <label class="switch"><input type="checkbox" id="toggle-mb"><span class="slider"></span></label>
-        </div>
-    </foreignObject>
-
-    <foreignObject x="320" y="720" width="160" height="160">
+    <foreignObject x="320" y="720" width="160" height="100">
         <div xmlns="http://www.w3.org/1999/xhtml" class="in-situ-control" style="width: 100%; height: 100%; gap: 12px; padding: 12px; box-sizing: border-box;">
-            <span style="font-size: 12px; font-weight: bold; color: var(--text-muted); border-bottom: 1px solid #e2e8f0; width: 100%; text-align: center; padding-bottom: 4px;">PUMP SPEEDS</span>
+            <span style="font-size: 12px; font-weight: bold; color: var(--text-muted); border-bottom: 1px solid #e2e8f0; width: 100%; text-align: center; padding-bottom: 4px;">PUMP SPEED</span>
             
             <div style="width: 100%; display: flex; flex-direction: column; gap: 4px;">
                 <div style="display: flex; justify-content: space-between; font-size: 12px; font-weight: bold; color: var(--text-dark); align-items: center;">
-                    <span>MOTOR A</span>
-                    <span id="val-ma-spd" class="speed-badge">100%</span>
+                    <span>MOTORS A&B</span>
+                    <span id="val-motors-spd" class="speed-badge">100%</span>
                 </div>
-                <input type="range" id="speed-ma" min="50" max="100" value="100" 
-                       style="width: 100%; accent-color: #3b82f6; cursor: pointer; margin: 0;">
-            </div>
-
-            <div style="width: 100%; display: flex; flex-direction: column; gap: 4px;">
-                <div style="display: flex; justify-content: space-between; font-size: 12px; font-weight: bold; color: var(--text-dark); align-items: center;">
-                    <span>MOTOR B</span>
-                    <span id="val-mb-spd" class="speed-badge">100%</span>
-                </div>
-                <input type="range" id="speed-mb" min="50" max="100" value="100" 
+                <input type="range" id="speed-motors" min="50" max="100" value="100" 
                        style="width: 100%; accent-color: #3b82f6; cursor: pointer; margin: 0;">
             </div>
         </div>
@@ -671,11 +656,9 @@ const coilB_bg    = $('coil-b-bg');
 const ampStatus   = $('amp-status');
 const adcStatus   = $('adc-status');
 
-// Sliders and Text Elements
-const speedMa = $('speed-ma');
-const speedMb = $('speed-mb');
-const valMaSpd = $('val-ma-spd');
-const valMbSpd = $('val-mb-spd');
+// Single centralized slider and display element
+const speedMotors = $('speed-motors');
+const valMotorsSpd = $('val-motors-spd');
 
 function updateGearSpeed(gear, speedPct) {
     const safeSpeed = Math.max(50, Math.min(100, parseInt(speedPct) || 100));
@@ -683,16 +666,17 @@ function updateGearSpeed(gear, speedPct) {
     gear.style.animationDuration = duration + 's';
 }
 
-speedMa.addEventListener('input', e => {
-    valMaSpd.textContent = e.target.value + '%';
+speedMotors.addEventListener('input', e => {
+    valMotorsSpd.textContent = e.target.value + '%';
     updateGearSpeed(gearA, e.target.value);
-});
-speedMb.addEventListener('input', e => {
-    valMbSpd.textContent = e.target.value + '%';
     updateGearSpeed(gearB, e.target.value);
 });
-speedMa.addEventListener('change', e => set(ref(db, 'telemetry/motors/a_speed'), parseInt(e.target.value)));
-speedMb.addEventListener('change', e => set(ref(db, 'telemetry/motors/b_speed'), parseInt(e.target.value)));
+
+// Update both A and B records in Firebase so the backend logic keeps working seamlessly
+speedMotors.addEventListener('change', e => {
+    set(ref(db, 'telemetry/motors/a_speed'), parseInt(e.target.value));
+    set(ref(db, 'telemetry/motors/b_speed'), parseInt(e.target.value));
+});
 
 const pipeStates = new Map();
 function updatePipeFlow(el, shouldFlow) {
@@ -749,6 +733,17 @@ const emChart = new Chart(emChartCanvas, {
                 tension: 0.1,
                 pointRadius: 0,
                 borderWidth: 2
+            },
+            {
+                label: 'POWER DRAWN (W)',
+                data: [],
+                borderColor: '#8b5cf6', // Added new purple color for power
+                backgroundColor: '#8b5cf6',
+                yAxisID: 'y2',
+                fill: false,
+                tension: 0.1,
+                pointRadius: 0,
+                borderWidth: 2
             }
         ]
     },
@@ -786,6 +781,15 @@ const emChart = new Chart(emChartCanvas, {
                 min: 20,
                 max: 100,
                 ticks: { color: '#ef4444', font: { family: "'Roboto Mono', monospace", weight: '700', size: 13 } }
+            },
+            y2: {
+                type: 'linear',
+                display: true,
+                position: 'right',
+                title: { display: true, text: 'POWER (W)', font: { family: "'Roboto Mono', monospace", weight: '700', size: 15 }, color: '#8b5cf6' },
+                grid: { drawOnChartArea: false }, // No gridlines drawn to keep UI clean
+                min: 0,
+                ticks: { color: '#8b5cf6', font: { family: "'Roboto Mono', monospace", weight: '700', size: 13 } }
             }
         }
     }
@@ -925,8 +929,12 @@ const fmtTime = s => (s != null && s !== undefined) ? [Math.floor(s/3600), Math.
 
 const getLogTime = () => new Date().toLocaleTimeString('en-GB');
 
-$('toggle-ma').addEventListener('change', e => set(ref(db, 'telemetry/motors/a_on'), e.target.checked));
-$('toggle-mb').addEventListener('change', e => set(ref(db, 'telemetry/motors/b_on'), e.target.checked));
+// Centralized toggle switch for motors
+$('toggle-motors').addEventListener('change', e => {
+    set(ref(db, 'telemetry/motors/a_on'), e.target.checked);
+    set(ref(db, 'telemetry/motors/b_on'), e.target.checked);
+});
+
 $('toggle-solenoid').addEventListener('change', e => set(ref(db, 'telemetry/valves/solenoid_on'), e.target.checked));
 $('toggle-dcpump').addEventListener('change', e => set(ref(db, 'telemetry/motors/dc_pump_on'), e.target.checked));
 
@@ -986,20 +994,19 @@ onValue(ref(db, 'telemetry'), snap => {
     const solenoid = d.valves?.solenoid_on || false;
     const flow     = ma || mb;
 
-    const maSpd    = d.motors?.a_speed ?? 100;
-    const mbSpd    = d.motors?.b_speed ?? 100;
+    // Use a_speed as the source of truth for the synced slider
+    const syncedSpeed = d.motors?.a_speed ?? 100;
 
-    $('toggle-ma').checked = ma;
-    $('toggle-mb').checked = mb;
+    $('toggle-motors').checked = ma || mb; // Treat as ON if either flag reads true
     $('toggle-coils').checked = ema;
     $('toggle-solenoid').checked = solenoid;
     $('toggle-dcpump').checked = dcPump;
     
-    if (document.activeElement !== speedMa) {
-        speedMa.value = maSpd; valMaSpd.textContent = maSpd + '%'; updateGearSpeed(gearA, maSpd);
-    }
-    if (document.activeElement !== speedMb) {
-        speedMb.value = mbSpd; valMbSpd.textContent = mbSpd + '%'; updateGearSpeed(gearB, mbSpd);
+    if (document.activeElement !== speedMotors) {
+        speedMotors.value = syncedSpeed; 
+        valMotorsSpd.textContent = syncedSpeed + '%'; 
+        updateGearSpeed(gearA, syncedSpeed);
+        updateGearSpeed(gearB, syncedSpeed);
     }
 
     gearA.classList.toggle('spinning', ma);
@@ -1088,6 +1095,9 @@ onValue(ref(db, 'telemetry'), snap => {
         emTotalTemp += temp_c;
         if (temp_c > emPeakTemp) emPeakTemp = temp_c;
         if (current_a > emPeakCur) emPeakCur = current_a;
+        
+        // Calculate the power drawn
+        const power_w = current_a * coil_volt;
 
         $('em-inst-cur').textContent = current_a.toFixed(2) + ' A';
         $('em-inst-temp').textContent = temp_c.toFixed(1) + ' °C';
@@ -1099,11 +1109,13 @@ onValue(ref(db, 'telemetry'), snap => {
         emChart.data.labels.push(nowTime);
         emChart.data.datasets[0].data.push(current_a);
         emChart.data.datasets[1].data.push(temp_c);
+        emChart.data.datasets[2].data.push(power_w); // Push newly calculated Power
 
         if (emChart.data.labels.length > 100) {
             emChart.data.labels.shift();
             emChart.data.datasets[0].data.shift();
             emChart.data.datasets[1].data.shift();
+            emChart.data.datasets[2].data.shift(); // Shift Power dataset to keep array length uniform
         }
         
         if (emModalOverlay.classList.contains('active')) {
