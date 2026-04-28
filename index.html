@@ -625,7 +625,7 @@
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-import { getDatabase, ref, onValue, set } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+import { getDatabase, ref, onValue, set, update } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
 const firebaseConfig = {
     apiKey:            "AIzaSyA9TrLnpHEsRijt8hbljFrJA0AU2c-Jk5g",
@@ -920,6 +920,72 @@ let emDataPoints = 0;
 
 let pfTotalRate = 0;
 let pfDataPoints = 0;
+
+// ----------------------------------------------------
+// MOCK DATA SIMULATION (Ported from C++ Node)
+// ----------------------------------------------------
+const mock_on_mV   = [58.5, 55.5, 67.0, 47.75, 37.25, 64.75, 56.0, 60.75, 44.0, 50.75];
+const mock_on_Amps = [1.59, 1.63, 1.57, 1.61, 1.61, 1.57, 1.54, 1.52, 1.63, 1.56];
+const mock_on_LPM  = [23.43, 22.23, 26.83, 19.12, 14.92, 25.93, 22.43, 24.33, 17.62, 26.33];
+
+const mock_off_mV   = [2.6, 2.0, 4.0, 1.6, 1.2, -0.6, -1.8, 1.8, -0.6, 1.2];
+const mock_off_Amps = [-0.15, -0.17, -0.15, -0.19, -0.09, -0.11, -0.09, -0.13, -0.10, -0.12];
+const mock_off_LPM  = [0.29, 0.02, 0.05, 0.18, 0.14, -0.07, 0.20, 0.02, 0.07, 0.14];
+
+let mockIndex = 0;
+let accumulatedVol = 0; // L
+let simUptime = 0; // seconds
+
+// 1 Hz Hardware Simulation Loop
+setInterval(() => {
+    // Read the master toggle state to determine which array to use
+    const isCoilActive = $('toggle-coils').checked;
+
+    let current_mV, current_Amps, current_LPM, current_Volts, current_Temp;
+
+    if (isCoilActive) {
+        current_mV = mock_on_mV[mockIndex];
+        current_Amps = mock_on_Amps[mockIndex];
+        current_LPM = mock_on_LPM[mockIndex];
+        current_Volts = 12.00;
+        // Simulate heating up while active
+        current_Temp = 30.0 + (Math.random() * 5); 
+    } else {
+        current_mV = mock_off_mV[mockIndex];
+        current_Amps = mock_off_Amps[mockIndex];
+        current_LPM = mock_off_LPM[mockIndex];
+        // random(20, 51) / 100.0 ported from C++
+        current_Volts = (Math.floor(Math.random() * 31) + 20) / 100.0; 
+        // Ambient baseline
+        current_Temp = 25.0 + (Math.random() * 1.5); 
+    }
+
+    // Step index
+    mockIndex = (mockIndex + 1) % 10;
+    
+    // Accumulate volumetric flow (L/min converted to L/sec per loop iteration)
+    if (current_LPM > 0) {
+        accumulatedVol += (current_LPM / 60);
+    }
+    
+    simUptime++;
+
+    // Push simulated data to Firebase
+    update(ref(db, 'telemetry'), {
+        'magnets/current_a': current_Amps,
+        'magnets/voltage': current_Volts,
+        'signals/raw_emf': current_mV,
+        // Mocking digital filter smoothing logic
+        'signals/kalman_emf': current_mV * 0.98, 
+        // Mocking 16-bit ADC quantization (e.g., ADS1115 gain context)
+        'signals/adc_emf': Math.floor(current_mV * 32.768), 
+        'flow/rate': current_LPM,
+        'flow/total': accumulatedVol,
+        'flow/uptime': simUptime,
+        'coil_temp': current_Temp
+    });
+
+}, 1000);
 
 // ----------------------------------------------------
 // TELEMETRY LOGIC
